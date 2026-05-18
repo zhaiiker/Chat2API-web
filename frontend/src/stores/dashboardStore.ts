@@ -179,11 +179,12 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       
       const today = new Date().toISOString().split('T')[0]
       const todayStats = persistentStats?.dailyStats?.[today]
-      const avgLatency = todayStats && todayStats.successRequests > 0
-        ? Math.round(todayStats.totalLatency / todayStats.successRequests)
+      const rawLatency = todayStats && todayStats.successRequests > 0
+        ? todayStats.totalLatency / todayStats.successRequests
         : (successRequests > 0
-          ? Math.round((persistentStats?.totalLatency ?? 0) / successRequests)
-          : Math.round(statistics?.avgLatency ?? 0))
+          ? (persistentStats?.totalLatency ?? 0) / successRequests
+          : (statistics?.avgLatency ?? 0))
+      const avgLatency = Number.isFinite(rawLatency) ? Math.round(rawLatency) : 0
       
       const activeAccounts = accounts?.filter((a: Account) => a.status === 'active').length ?? 0
 
