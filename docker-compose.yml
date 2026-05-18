@@ -1,0 +1,25 @@
+services:
+  chat2api:
+    build: .
+    image: chat2api:latest
+    container_name: chat2api
+    restart: unless-stopped
+    ports:
+      # Expose the unified UI + OpenAI-compatible API on the same port.
+      - "8080:8080"
+    environment:
+      # Bind on all interfaces so the container is reachable.
+      HOST: "0.0.0.0"
+      PORT: "8080"
+      # Pin the management API secret so it survives container restarts.
+      # Generate one with `openssl rand -hex 32`.
+      CHAT2API_MANAGEMENT_SECRET: "${CHAT2API_MANAGEMENT_SECRET:-}"
+      # Optional: pin the credential encryption key (otherwise auto-generated).
+      CHAT2API_ENCRYPTION_KEY: "${CHAT2API_ENCRYPTION_KEY:-}"
+      # Where the SQLite-style data file and logs live inside the container.
+      CHAT2API_DATA_DIR: "/data"
+    volumes:
+      - chat2api-data:/data
+
+volumes:
+  chat2api-data:

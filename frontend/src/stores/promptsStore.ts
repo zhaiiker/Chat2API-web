@@ -5,7 +5,7 @@
 
 import { create } from 'zustand'
 import { ApiService } from '../services/api'
-import type { SystemPrompt, PromptType } from '../../../../shared/types'
+import type { SystemPrompt, PromptType } from '@shared/types'
 
 interface PromptsState {
   prompts: SystemPrompt[]

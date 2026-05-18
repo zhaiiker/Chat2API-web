@@ -6,4 +6,5 @@
 export * from './types'
 export * from './adapters'
 export { OAuthManager, oauthManager } from './manager'
-export { InAppLoginManager, inAppLoginManager, InAppLoginResult, InAppLoginOptions } from './inAppLogin'
+export { InAppLoginManager, inAppLoginManager } from './inAppLogin'
+export type { InAppLoginResult, InAppLoginOptions } from './inAppLogin'

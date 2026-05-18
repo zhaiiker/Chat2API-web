@@ -14,8 +14,6 @@ import {
   CredentialInfo,
 } from './types'
 import { createAdapter, BaseOAuthAdapter } from './adapters'
-import { storeManager } from '../store/store'
-import { inAppLoginManager, InAppLoginResult } from './inAppLogin'
 
 const DEFAULT_CALLBACK_PORT = 8311
 const DEFAULT_TIMEOUT = 300000 // 5 minutes

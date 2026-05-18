@@ -1,0 +1,14 @@
+.git
+.github
+node_modules
+dist
+build
+docs
+**/*.log
+.DS_Store
+.env
+.env.*
+*.dmg
+*.exe
+*.AppImage
+*.deb

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { ApiService } from '../services/api'
-import type { LogEntry, LogLevel } from '../../../../shared/types'
+import type { LogEntry, LogLevel } from '@shared/types'
 
 interface LogFilter {
   level: LogLevel | 'all'

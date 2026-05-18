@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { ApiService } from '../services/api'
-import type { ProxyStatus, ProxyStatistics, LoadBalanceStrategy, ModelMapping, AppConfig } from '../../../../shared/types'
+import type { ProxyStatus, ProxyStatistics, LoadBalanceStrategy, ModelMapping, AppConfig } from '@shared/types'
 
 export interface ProxyConfig {
   port: number

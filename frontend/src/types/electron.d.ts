@@ -1,9 +1,22 @@
-import type { 
-  Provider, 
-  Account, 
-  ProxyStatus, 
+/**
+ * Frontend Type Definitions
+ *
+ * Note: This file used to define the Electron preload API surface.
+ * After migrating to a pure-web/HTTP architecture, the same shape is
+ * preserved as a thin client interface over the Management HTTP API
+ * via the runtime shim in `services/electronShim.ts`.
+ *
+ * The `window.electronAPI` global remains for backward compatibility
+ * with existing components. New code should import `ApiService`
+ * from `services/api.ts` directly.
+ */
+
+import type {
+  Provider,
+  Account,
+  ProxyStatus,
   ProxyStatistics,
-  ProviderCheckResult, 
+  ProviderCheckResult,
   OAuthResult,
   AuthType,
   CredentialField,
@@ -22,14 +35,14 @@ import type {
   ToolCallingConfig,
   LegacyToolPromptConfig,
   EffectiveModel,
-} from '../../../shared/types'
+} from '@shared/types'
 
-export type { 
-  Provider, 
-  Account, 
+export type {
+  Provider,
+  Account,
   ProxyStatus,
   ProxyStatistics,
-  ProviderCheckResult, 
+  ProviderCheckResult,
   OAuthResult,
   AuthType,
   CredentialField,
@@ -67,9 +80,11 @@ export interface BuiltinProviderConfig extends Provider {
 }
 
 interface ProxyAPI {
-  start: (port?: number) => Promise<boolean>
+  start: (port?: number, host?: string) => Promise<boolean>
   stop: () => Promise<boolean>
+  restart: (port?: number, host?: string) => Promise<boolean>
   getStatus: () => Promise<ProxyStatus>
+  /** @deprecated In web mode this returns a noop unsubscribe; use polling instead */
   onStatusChanged: (callback: (status: ProxyStatus) => void) => () => void
 }
 
@@ -83,15 +98,10 @@ interface StoreAPI {
 interface ProvidersAPI {
   getAll: () => Promise<Provider[]>
   getBuiltin: () => Promise<BuiltinProviderConfig[]>
-  add: (data: {
-    id?: string
+  add: (data: Partial<Provider> & {
     name: string
-    type?: 'builtin' | 'custom'
     authType: AuthType
     apiEndpoint: string
-    headers?: Record<string, string>
-    description?: string
-    supportedModels?: string[]
     credentialFields?: CredentialField[]
   }) => Promise<Provider>
   update: (id: string, updates: Partial<Provider>) => Promise<Provider | null>
@@ -152,7 +162,7 @@ interface AccountsAPI {
     totalCredits: number
     usedCredits: number
     remainingCredits: number
-    expiresAt?: number // Credit reset timestamp (milliseconds)
+    expiresAt?: number
   } | null>
   clearChats: (accountId: string) => Promise<{ success: boolean; error?: string }>
 }
@@ -160,16 +170,12 @@ interface AccountsAPI {
 interface OAuthAPI {
   startLogin: (providerId: string, providerType: ProviderVendor) => Promise<OAuthResult>
   cancelLogin: () => Promise<void>
-  loginWithToken: (providerId: string, providerType: ProviderVendor, token: string) => Promise<OAuthResult>
+  loginWithToken: (providerId: string, providerType: ProviderVendor, token: string, realUserID?: string, mimoUserId?: string, mimoPhToken?: string) => Promise<OAuthResult>
   validateToken: (providerId: string, providerType: ProviderVendor, credentials: Record<string, string>) => Promise<{
     valid: boolean
     tokenType?: string
     expiresAt?: number
-    accountInfo?: {
-      userId?: string
-      email?: string
-      name?: string
-    }
+    accountInfo?: { userId?: string; email?: string; name?: string }
     error?: string
   }>
   refreshToken: (providerId: string, providerType: ProviderVendor, credentials: Record<string, string>) => Promise<{
@@ -179,10 +185,15 @@ interface OAuthAPI {
     refreshToken?: string
   } | null>
   getStatus: () => Promise<string>
+  /** @deprecated Not supported in web mode */
   startInAppLogin: (providerId: string, providerType: ProviderVendor, timeout?: number) => Promise<OAuthResult>
+  /** @deprecated Not supported in web mode */
   cancelInAppLogin: () => Promise<void>
+  /** @deprecated Not supported in web mode */
   isInAppLoginOpen: () => Promise<boolean>
+  /** @deprecated Not supported in web mode */
   onCallback: (callback: (result: OAuthResult) => void) => () => void
+  /** @deprecated Not supported in web mode */
   onProgress: (callback: (event: {
     status: 'idle' | 'pending' | 'success' | 'error' | 'cancelled'
     message: string
@@ -224,6 +235,7 @@ interface LogsAPI {
   clear: () => Promise<void>
   export: (format?: 'json' | 'txt') => Promise<string>
   getById: (id: string) => Promise<LogEntry | undefined>
+  /** @deprecated In web mode there are no push events; use polling */
   onNewLog: (callback: (log: LogEntry) => void) => () => void
 }
 
@@ -275,6 +287,7 @@ interface AppAPI {
 interface ConfigAPI {
   get: () => Promise<AppConfig>
   update: (updates: Partial<AppConfig>) => Promise<boolean>
+  /** @deprecated In web mode there are no push events; use polling */
   onConfigChanged: (callback: (config: AppConfig) => void) => () => void
 }
 
@@ -339,13 +352,10 @@ interface RequestLogEntry {
   accountName?: string
   requestBody?: string
   userInput?: string
-  /** Web search enabled */
   webSearch?: boolean
-  /** Reasoning effort level */
   reasoningEffort?: 'low' | 'medium' | 'high'
   responseStatus: number
   responsePreview?: string
-  /** Response body JSON string */
   responseBody?: string
   latency: number
   isStream: boolean
@@ -382,6 +392,7 @@ interface RequestLogsAPI {
   getStats: () => Promise<RequestLogStats>
   getTrend: (days?: number) => Promise<RequestLogTrend[]>
   clear: () => Promise<void>
+  /** @deprecated In web mode there are no push events; use polling */
   onNewLog: (callback: (log: RequestLogEntry) => void) => () => void
 }
 
@@ -413,8 +424,11 @@ interface StatisticsAPI {
 }
 
 interface TrayAPI {
+  /** @deprecated Web mode has no system tray */
   openDashboard: () => void
+  /** @deprecated Web mode has no system tray */
   setHeight: (height: number) => void
+  /** @deprecated Web mode has no system tray */
   quitApp: () => void
 }
 
@@ -462,7 +476,12 @@ interface ToolCallingAPI {
   runSmoke: (input: { clientAdapterId: string }) => Promise<{ success: boolean; data?: unknown; error?: { message?: string } }>
 }
 
-interface ElectronAPI {
+/**
+ * The shape of the legacy `window.electronAPI` global.
+ * In web mode this object is materialised at runtime by `services/electronShim.ts`
+ * and forwards every call to the Management HTTP API.
+ */
+export interface ElectronAPI {
   proxy: ProxyAPI
   store: StoreAPI
   providers: ProvidersAPI

@@ -2,7 +2,7 @@
   "name": "chat2api",
   "version": "1.3.0",
   "description": "Chat2API 管理器 - 统一管理多个 AI 服务提供商，提供 OpenAI 兼容 API 接口",
-  "main": "./out/main/index.js",
+  "main": "dist/backend/index.js",
   "author": {
     "name": "Chat2API Team",
     "email": "support@chat2api.com"
@@ -10,13 +10,16 @@
   "homepage": "https://github.com/chat2api/Chat2API-Manager",
   "license": "GPL-3.0",
   "scripts": {
-    "dev:backend": "npx ts-node --project tsconfig.backend.json backend/index.ts",
+    "dev:backend": "ts-node --project tsconfig.backend.json backend/index.ts",
     "dev:frontend": "vite",
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
     "build:backend": "tsc --project tsconfig.backend.json",
     "build:frontend": "vite build",
     "build": "npm run build:backend && npm run build:frontend",
-    "start": "node dist/backend/index.js"
+    "start": "node dist/backend/index.js",
+    "typecheck:backend": "tsc --project tsconfig.backend.json --noEmit",
+    "typecheck:frontend": "tsc --project tsconfig.json --noEmit",
+    "typecheck": "npm run typecheck:backend && npm run typecheck:frontend"
   },
   "dependencies": {
     "@koa/router": "^15.3.0",
@@ -39,7 +42,6 @@
     "clsx": "^2.1.1",
     "conf": "^15.1.0",
     "dotenv": "^17.4.2",
-    "electron-updater": "^6.3.9",
     "eventsource-parser": "^3.0.6",
     "i18next": "^25.8.11",
     "i18next-browser-languagedetector": "^8.2.1",
@@ -68,9 +70,8 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@types/react-window": "^1.8.8",
-    "@vitejs/plugin-react": "^4.3.3",
+    "@vitejs/plugin-react": "4.3.3",
     "autoprefixer": "^10.4.20",
-    "canvas": "^3.2.1",
     "concurrently": "^9.2.1",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.14",

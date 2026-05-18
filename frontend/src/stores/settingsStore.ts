@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { ApiService } from '../services/api'
-import type { AppConfig } from '../../../../shared/types'
+import type { AppConfig } from '@shared/types'
 import i18n from '@/i18n'
 
 export type Theme = 'light' | 'dark' | 'system'

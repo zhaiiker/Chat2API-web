@@ -7,6 +7,8 @@ import Koa, { type Context, type Next } from 'koa'
 import Router from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import { Server as HttpServer } from 'http'
+import * as fs from 'fs'
+import * as path from 'path'
 import routes from './routes'
 import managementRoutes from './routes/management'
 import { proxyStatusManager } from './status'
@@ -14,6 +16,27 @@ import { storeManager } from '../store/store'
 import { sessionManager } from './sessionManager'
 
 const SLOW_REQUEST_THRESHOLD_MS = 1500
+
+const STATIC_MIME_TYPES: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.mjs': 'application/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.map': 'application/json',
+  '.txt': 'text/plain; charset=utf-8',
+  '.wasm': 'application/wasm',
+}
 
 /**
  * Proxy Server Class
@@ -24,6 +47,7 @@ export class ProxyServer {
   private server: HttpServer | null = null
   private port: number = 8080
   private host: string = '127.0.0.1'
+  private staticFrontendDir: string | null = null
 
   constructor() {
     this.app = new Koa()
@@ -32,6 +56,19 @@ export class ProxyServer {
     this.setupMiddleware()
     this.setupRoutes()
     this.setupErrorHandler()
+  }
+
+  /**
+   * Enable serving a built single-page frontend from this server.
+   * Static assets are served as-is and unknown paths fall back to index.html
+   * so client-side routing keeps working.
+   */
+  enableStaticFrontend(directory: string): void {
+    if (!fs.existsSync(path.join(directory, 'index.html'))) {
+      console.warn(`[ProxyServer] No index.html found in ${directory}; static UI disabled.`)
+      return
+    }
+    this.staticFrontendDir = path.resolve(directory)
   }
 
   /**
@@ -161,6 +198,11 @@ export class ProxyServer {
     }
 
     this.router.get('/', async (ctx) => {
+      // When the SPA is mounted, let the static fallback render index.html.
+      if (this.staticFrontendDir) {
+        ctx.status = 404
+        return
+      }
       ctx.body = {
         name: 'Chat2API Proxy',
         version: '1.1.2',
@@ -241,6 +283,19 @@ export class ProxyServer {
     this.app.use(this.router.allowedMethods())
 
     this.app.use(async (ctx) => {
+      // Don't try to serve a SPA for API/management calls.
+      const isApiPath =
+        ctx.path.startsWith('/v0/') ||
+        ctx.path.startsWith('/v1/') ||
+        ctx.path === '/health' ||
+        ctx.path === '/stats'
+
+      if (!isApiPath && this.staticFrontendDir && (ctx.method === 'GET' || ctx.method === 'HEAD')) {
+        if (await this.serveStaticAsset(ctx)) {
+          return
+        }
+      }
+
       ctx.status = 404
       ctx.body = {
         error: {
@@ -249,6 +304,47 @@ export class ProxyServer {
         },
       }
     })
+  }
+
+  /**
+   * Try to serve a static asset from the configured frontend directory.
+   * Falls back to `index.html` so the SPA can resolve client-side routes.
+   * Returns true when a response was written.
+   */
+  private async serveStaticAsset(ctx: Context): Promise<boolean> {
+    if (!this.staticFrontendDir) return false
+
+    const root = this.staticFrontendDir
+
+    // Normalise the request path and reject any traversal attempts.
+    const requestPath = decodeURIComponent(ctx.path)
+    if (requestPath.includes('\0')) return false
+    const normalised = path.posix.normalize(requestPath).replace(/^\/+/, '')
+    if (normalised.startsWith('..')) return false
+
+    const candidates: string[] = []
+    if (normalised && normalised !== '/') {
+      candidates.push(path.join(root, normalised))
+    }
+    candidates.push(path.join(root, 'index.html'))
+
+    for (const candidate of candidates) {
+      const resolved = path.resolve(candidate)
+      if (!resolved.startsWith(root)) continue
+      try {
+        const stat = await fs.promises.stat(resolved)
+        if (stat.isDirectory()) continue
+        const ext = path.extname(resolved).toLowerCase()
+        ctx.type = STATIC_MIME_TYPES[ext] || 'application/octet-stream'
+        ctx.set('Cache-Control', ext === '.html' ? 'no-cache' : 'public, max-age=3600')
+        ctx.body = await fs.promises.readFile(resolved)
+        return true
+      } catch {
+        // try next candidate
+      }
+    }
+
+    return false
   }
 
   /**

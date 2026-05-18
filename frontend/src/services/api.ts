@@ -12,7 +12,7 @@ import type {
   SystemPrompt,
   SessionConfig,
   SessionRecord,
-} from '../../../../shared/types'
+} from '@shared/types'
 
 // Setup default axios instance
 const apiClient: AxiosInstance = axios.create({

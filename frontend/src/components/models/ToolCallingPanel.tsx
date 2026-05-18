@@ -8,7 +8,7 @@ import {
   type ToolCallingConfig,
   type ToolCallingModeSetting,
   type ToolClientAdapterId,
-} from '../../../../shared/toolCalling'
+} from '@shared/toolCalling'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'

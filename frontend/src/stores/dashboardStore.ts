@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { ApiService } from '../services/api'
-import type { ProxyStatus, ProxyStatistics, Provider, Account, ProviderCheckResult, LogEntry } from '../../../../shared/types'
+import type { ProxyStatus, ProxyStatistics, Provider, Account, ProviderCheckResult, LogEntry } from '@shared/types'
 import type { ProviderStats, ActivityItem, ChartDataPoint } from '../components/dashboard'
 
 interface DashboardStats {

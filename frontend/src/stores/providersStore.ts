@@ -9,7 +9,7 @@ import type {
   Account, 
   ProviderStatus,
   BuiltinProviderConfig,
-} from '../../../../shared/types'
+} from '@shared/types'
 
 interface ProviderState {
   providers: Provider[]
