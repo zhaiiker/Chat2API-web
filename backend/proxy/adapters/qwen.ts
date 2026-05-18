@@ -416,8 +416,11 @@ export class QwenStreamHandler {
     const transStream = new PassThrough()
 
     console.log('[Qwen] Starting stream handler...')
-    
-    const contentEncoding = response?.headers?.['content-encoding']
+
+    // axios v1 types response.headers values as string | number | boolean | string[] | AxiosHeaders.
+    // We only ever expect 'gzip' / 'deflate' / 'br' here, so coerce to a string for safe comparison.
+    const rawContentEncoding = response?.headers?.['content-encoding']
+    const contentEncoding = typeof rawContentEncoding === 'string' ? rawContentEncoding : undefined
     console.log('[Qwen] Content-Encoding:', contentEncoding)
 
     let buffer = ''
@@ -918,8 +921,11 @@ export class QwenStreamHandler {
       }
 
       let decompressStream: any = stream
-      
-      const contentEncoding = response?.headers?.['content-encoding']?.toLowerCase()
+
+      // Same axios v1 header typing dance as above; narrow to a string before lower-casing.
+      const rawContentEncoding = response?.headers?.['content-encoding']
+      const contentEncoding =
+        typeof rawContentEncoding === 'string' ? rawContentEncoding.toLowerCase() : undefined
       if (contentEncoding === 'gzip') {
         console.log('[Qwen] Decompressing gzip stream...')
         decompressStream = stream.pipe(createGunzip())
