@@ -14,8 +14,9 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Check, Plus, ArrowRight, Loader2, ExternalLink, AlertCircle, CheckCircle2, ArrowLeft, Info, Eye, EyeOff, Copy } from 'lucide-react'
-import type { BuiltinProviderConfig, ProviderVendor } from '@/types/electron'
+import { Check, Plus, ArrowRight, Loader2, AlertCircle, CheckCircle2, ArrowLeft, Info, Eye, EyeOff, Copy } from 'lucide-react'
+import type { BuiltinProviderConfig } from '@/types/electron'
+import { TokenExtractionGuide } from '@/components/oauth/TokenExtractionGuide'
 import { cn } from '@/lib/utils'
 import deepseekIcon from '@/assets/providers/deepseek.svg'
 import glmIcon from '@/assets/providers/glm.svg'
@@ -164,7 +165,6 @@ export function AddProviderDialog({
   const [credentials, setCredentials] = useState<Record<string, string>>({})
   const [isValidating, setIsValidating] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isOAuthLoading, setIsOAuthLoading] = useState(false)
   const [validationResult, setValidationResult] = useState<{
     valid?: boolean
     error?: string
@@ -175,7 +175,6 @@ export function AddProviderDialog({
       used?: number
     }
   }>({})
-  const [oauthStatus, setOAuthStatus] = useState<string>('')
   const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({})
   const [copiedFields, setCopiedFields] = useState<Record<string, boolean>>({})
 
@@ -456,8 +455,6 @@ export function AddProviderDialog({
       setCredentials({})
       setValidationResult({})
       setActiveTab('manual')
-      setIsOAuthLoading(false)
-      setOAuthStatus('')
       setVisibleFields({})
       setCopiedFields({})
     }
@@ -537,72 +534,6 @@ export function AddProviderDialog({
     }
   }
 
-  const handleOpenOAuthBrowser = async () => {
-    if (!selectedProviderData) return
-    
-    setIsOAuthLoading(true)
-    setOAuthStatus(t('providers.openingLoginWindow'))
-    
-    try {
-      console.log('[AddProviderDialog] Starting OAuth login for:', selectedProviderData.id)
-      
-      const result = await window.electronAPI?.oauth.startInAppLogin(
-        selectedProviderData.id,
-        selectedProviderData.id as ProviderVendor
-      )
-      
-      console.log('[AddProviderDialog] OAuth result:', JSON.stringify(result, null, 2))
-      
-      if (result?.success && result.credentials) {
-        console.log('[AddProviderDialog] OAuth success, credentials:', JSON.stringify(result.credentials, null, 2))
-        
-        const mappedCredentials = mapOAuthCredentials(selectedProviderData?.id, result.credentials)
-        console.log('[AddProviderDialog] Mapped credentials:', JSON.stringify(mappedCredentials, null, 2))
-        
-        const hasAllRequiredFields = selectedProviderData.credentialFields
-          .filter(f => f.required)
-          .every(f => mappedCredentials[f.name])
-        
-        console.log('[AddProviderDialog] Has all required fields:', hasAllRequiredFields)
-        console.log('[AddProviderDialog] Required fields:', selectedProviderData.credentialFields.filter(f => f.required).map(f => f.name))
-        console.log('[AddProviderDialog] Mapped credentials keys:', Object.keys(mappedCredentials))
-        
-        if (!hasAllRequiredFields) {
-          console.error('[AddProviderDialog] Missing required fields!')
-          const missing = selectedProviderData.credentialFields
-            .filter(f => f.required && !mappedCredentials[f.name])
-            .map(f => f.name)
-          console.error('[AddProviderDialog] Missing:', missing)
-        }
-        
-        setCredentials(mappedCredentials)
-        setOAuthStatus(t('providers.loginSuccess'))
-        
-        setValidationResult({
-          valid: true,
-          userInfo: result.accountInfo
-        })
-      } else {
-        const errorMsg = result?.error || ''
-        console.error('[AddProviderDialog] OAuth failed:', errorMsg)
-        const translatedError = errorMsg === 'Login window was closed' 
-          ? t('providers.loginWindowClosed')
-          : errorMsg === 'A login window is already open'
-            ? t('providers.loginWindowAlreadyOpen')
-            : errorMsg.includes('Guest account') 
-              ? t('providers.guestAccountNotAllowed')
-              : errorMsg || t('providers.loginFailed')
-        setOAuthStatus(translatedError)
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : t('providers.loginFailed')
-      console.error('[AddProviderDialog] OAuth error:', errorMessage)
-      setOAuthStatus(errorMessage)
-    } finally {
-      setIsOAuthLoading(false)
-    }
-  }
-
   const handleCreateCustom = () => {
     onCreateCustom()
     setSelectedProvider(null)
@@ -620,7 +551,6 @@ export function AddProviderDialog({
     setCredentials({})
     setValidationResult({})
     setActiveTab('manual')
-    setOAuthStatus('')
   }
 
   const renderCredentialFields = () => {
@@ -995,37 +925,19 @@ export function AddProviderDialog({
             </TabsContent>
 
             <TabsContent value="oauth" className="mt-4">
-              <div className="flex flex-col items-center justify-center py-6 space-y-4">
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {t('providers.clickToOpenOAuth')}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t('providers.oauthAutoCapture')}
-                  </p>
-                </div>
-                <Button 
-                  onClick={handleOpenOAuthBrowser}
-                  disabled={isOAuthLoading}
-                >
-                  {isOAuthLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {oauthStatus || t('providers.loggingIn')}
-                    </>
-                  ) : (
-                    <>
-                      <ExternalLink className="mr-2 h-4 w-4" />
-                      {t('providers.openOAuthLogin')}
-                    </>
-                  )}
-                </Button>
-                {oauthStatus && !isOAuthLoading && (
-                  <p className={`text-sm ${validationResult.valid ? 'text-green-600' : 'text-red-500'}`}>
-                    {oauthStatus}
-                  </p>
-                )}
-              </div>
+              {selectedProviderData && (
+                <TokenExtractionGuide
+                  providerId={selectedProviderData.id}
+                  providerType={selectedProviderData.id}
+                  providerName={selectedProviderData.name}
+                  onSuccess={(creds, accountInfo) => {
+                    const mapped = mapOAuthCredentials(selectedProviderData.id, creds)
+                    setCredentials(mapped)
+                    setValidationResult({ valid: true, userInfo: accountInfo })
+                    setActiveTab('manual')
+                  }}
+                />
+              )}
             </TabsContent>
           </Tabs>
         ) : (

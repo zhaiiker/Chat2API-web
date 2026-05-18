@@ -18,8 +18,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { TokenExtractionGuide } from '@/components/oauth/TokenExtractionGuide'
 import { 
-  ExternalLink, 
   User, 
   AlertCircle,
   Loader2,
@@ -29,7 +29,7 @@ import {
   Copy,
   Check
 } from 'lucide-react'
-import type { Provider, CredentialField, Account, BuiltinProviderConfig, ProviderVendor } from '@/types/electron'
+import type { Provider, CredentialField, Account, BuiltinProviderConfig } from '@/types/electron'
 
 /**
  * Map OAuth credentials to provider credential field names
@@ -163,8 +163,6 @@ export function AddAccountDialog({
     }
   }>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isOAuthLoading, setIsOAuthLoading] = useState(false)
-  const [oauthStatus, setOAuthStatus] = useState<string>('')
 
   const isEditing = !!editingAccount
   const builtinProvider = provider as BuiltinProviderConfig | null
@@ -190,8 +188,6 @@ export function AddAccountDialog({
     setCredentials({})
     setValidationResult({})
     setActiveTab('manual')
-    setIsOAuthLoading(false)
-    setOAuthStatus('')
   }
 
   const handleCredentialChange = (fieldName: string, value: string) => {
@@ -292,51 +288,6 @@ export function AddAccountDialog({
     }
   }
 
-  const handleOpenOAuthBrowser = async () => {
-    if (!provider) return
-    
-    setIsOAuthLoading(true)
-    setOAuthStatus(t('providers.openingLoginWindow'))
-    
-    try {
-      const result = await window.electronAPI?.oauth.startInAppLogin(
-        provider.id,
-        provider.id as ProviderVendor
-      )
-      
-      if (result?.success && result.credentials) {
-        // Map OAuth credentials to provider credential field names
-        const mappedCredentials = mapOAuthCredentials(provider?.id, result.credentials)
-        setCredentials(mappedCredentials)
-        setOAuthStatus(t('providers.loginSuccess'))
-        
-        if (result.accountInfo?.name) {
-          setName(result.accountInfo.name)
-        }
-        
-        setValidationResult({
-          valid: true,
-          userInfo: result.accountInfo
-        })
-      } else {
-        const errorMsg = result?.error || ''
-        const translatedError = errorMsg === 'Login window was closed' 
-          ? t('providers.loginWindowClosed')
-          : errorMsg === 'A login window is already open'
-            ? t('providers.loginWindowAlreadyOpen')
-            : errorMsg.includes('Guest account') 
-              ? t('providers.guestAccountNotAllowed')
-              : errorMsg || t('providers.loginFailed')
-        setOAuthStatus(translatedError)
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : t('providers.loginFailed')
-      setOAuthStatus(errorMessage)
-    } finally {
-      setIsOAuthLoading(false)
-    }
-  }
-
   if (!provider) return null
 
   return (
@@ -393,37 +344,23 @@ export function AddAccountDialog({
                 </TabsContent>
 
                 <TabsContent value="oauth" className="mt-4">
-                  <div className="flex flex-col items-center justify-center py-6 space-y-4">
-                    <div className="text-center">
-                      <p className="text-sm text-muted-foreground mb-4">
-                        {t('providers.clickToOpenOAuth')}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {t('providers.oauthAutoCapture')}
-                      </p>
-                    </div>
-                    <Button 
-                      onClick={handleOpenOAuthBrowser}
-                      disabled={isOAuthLoading}
-                    >
-                      {isOAuthLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {oauthStatus || t('providers.loggingIn')}
-                        </>
-                      ) : (
-                        <>
-                          <ExternalLink className="mr-2 h-4 w-4" />
-                          {t('providers.openOAuthLogin')}
-                        </>
-                      )}
-                    </Button>
-                    {oauthStatus && !isOAuthLoading && (
-                      <p className={`text-sm ${validationResult.valid ? 'text-green-600' : 'text-red-500'}`}>
-                        {oauthStatus}
-                      </p>
-                    )}
-                  </div>
+                  {provider && (
+                    <TokenExtractionGuide
+                      providerId={provider.id}
+                      providerType={provider.id}
+                      providerName={provider.name}
+                      onSuccess={(creds, accountInfo) => {
+                        // Map raw OAuth credentials to the provider's credential
+                        // field names, then pre-fill the form so the user can
+                        // review (and adjust the account name) before saving.
+                        const mapped = mapOAuthCredentials(provider.id, creds)
+                        setCredentials(mapped)
+                        if (accountInfo?.name) setName(accountInfo.name)
+                        setValidationResult({ valid: true, userInfo: accountInfo })
+                        setActiveTab('manual')
+                      }}
+                    />
+                  )}
                 </TabsContent>
               </Tabs>
             )}
