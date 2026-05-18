@@ -1106,5 +1106,23 @@
       "customPromptPlaceholder": "Enter custom summary prompt...",
       "customPromptHint": "Leave empty to use default prompt"
     }
+  },
+  "password": {
+    "title": "Administrator Password",
+    "description": "Change the password used to log into the Chat2API web UI.",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "newPasswordPlaceholder": "At least 8 characters",
+    "confirmPassword": "Confirm new password",
+    "rotateSecretHint": "Also rotate the Management API secret. Recommended after a suspected leak; any clients using the old secret will need to be updated.",
+    "updating": "Updating...",
+    "updateButton": "Update password",
+    "success": "Password changed successfully.",
+    "successRotated": "Password changed and Management API secret rotated.",
+    "errorCurrentRequired": "Please enter your current password.",
+    "errorMinLength": "The new password must be at least 8 characters long.",
+    "errorMismatch": "The new passwords do not match.",
+    "errorSamePassword": "The new password must differ from the current one.",
+    "errorFailed": "Failed to change password."
   }
 }

@@ -1106,5 +1106,23 @@
       "customPromptPlaceholder": "输入自定义摘要提示词...",
       "customPromptHint": "留空使用默认提示词"
     }
+  },
+  "password": {
+    "title": "管理员密码",
+    "description": "更改用于登录 Chat2API 管理界面的密码。",
+    "currentPassword": "当前密码",
+    "newPassword": "新密码",
+    "newPasswordPlaceholder": "至少 8 个字符",
+    "confirmPassword": "确认新密码",
+    "rotateSecretHint": "同时轮换管理 API 密钥。如果怀疑密钥泄露建议勾选；使用旧密钥的客户端需要重新配置。",
+    "updating": "更新中...",
+    "updateButton": "更新密码",
+    "success": "密码修改成功。",
+    "successRotated": "密码已修改，管理 API 密钥已轮换。",
+    "errorCurrentRequired": "请输入当前密码。",
+    "errorMinLength": "新密码至少需要 8 个字符。",
+    "errorMismatch": "两次输入的新密码不一致。",
+    "errorSamePassword": "新密码不能与当前密码相同。",
+    "errorFailed": "密码修改失败。"
   }
 }
