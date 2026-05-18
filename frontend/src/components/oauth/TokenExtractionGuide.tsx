@@ -15,6 +15,7 @@
  */
 
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -242,6 +243,7 @@ export function TokenExtractionGuide({
   onSuccess,
 }: TokenExtractionGuideProps) {
   const guide = useMemo(() => getProviderGuide(providerType), [providerType])
+  const { t } = useTranslation()
   const [token, setToken] = useState('')
   const [extras, setExtras] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
@@ -326,7 +328,7 @@ export function TokenExtractionGuide({
         ) : (
           <ChevronRight className="h-3.5 w-3.5" />
         )}
-        Manual paste from DevTools (advanced)
+        {t('oauth.bookmarklet.manualFallbackAdvanced')}
       </button>
 
       {showManual && (

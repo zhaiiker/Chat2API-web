@@ -58,6 +58,21 @@ export class JsonStore<T extends object = Record<string, unknown>> {
 
     const raw = fs.readFileSync(this.path, 'utf8')
     if (!raw.trim()) {
+      // Main file is empty. Try to recover from .tmp before resetting.
+      const tmpPath = `${this.path}.tmp`
+      if (fs.existsSync(tmpPath)) {
+        try {
+          const tmpRaw = fs.readFileSync(tmpPath, 'utf8')
+          if (tmpRaw.trim()) {
+            const parsed = JSON.parse(tmpRaw) as Record<string, unknown>
+            fs.renameSync(tmpPath, this.path)
+            console.warn(`[JsonStore] Recovered empty main file from .tmp: ${tmpPath}`)
+            return { ...defaults, ...parsed }
+          }
+        } catch {
+          // .tmp is also bad — fall through to default initialization.
+        }
+      }
       const initial = { ...defaults }
       this.persist(initial)
       return initial
@@ -67,6 +82,22 @@ export class JsonStore<T extends object = Record<string, unknown>> {
     try {
       parsed = JSON.parse(raw) as Record<string, unknown>
     } catch (err) {
+      // The main file is corrupted. Before giving up, check if a .tmp
+      // file exists — it may be the last successful atomic write that
+      // was interrupted before rename completed.
+      const tmpPath = `${this.path}.tmp`
+      if (fs.existsSync(tmpPath)) {
+        try {
+          const tmpRaw = fs.readFileSync(tmpPath, 'utf8')
+          parsed = JSON.parse(tmpRaw) as Record<string, unknown>
+          // The .tmp is valid — promote it to the main file.
+          fs.renameSync(tmpPath, this.path)
+          console.warn(`[JsonStore] Recovered from .tmp file: ${tmpPath}`)
+          return { ...defaults, ...parsed }
+        } catch {
+          // .tmp is also bad — fall through to the original error.
+        }
+      }
       const message = err instanceof Error ? err.message : String(err)
       throw new Error(`Failed to parse store file ${this.path}: ${message}`)
     }

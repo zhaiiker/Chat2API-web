@@ -850,7 +850,33 @@
     "failed": "Failed",
     "cancelled": "Cancelled",
     "loginTimeout": "Login timeout, please try again",
-    "help": "Help"
+    "help": "Help",
+    "bookmarklet": {
+      "title": "Bookmarklet Auto-Capture",
+      "description": "Use a bookmarklet to auto-extract the token from {{provider}}'s page — no DevTools needed.",
+      "generate": "Generate bookmarklet",
+      "generating": "Generating bookmarklet…",
+      "dragHint": "Drag this link into your bookmark bar:",
+      "dragButton": "Save to Chat2API",
+      "clickWarning": "Drag this link to your bookmark bar, then click it while on the {{provider}} page.",
+      "instructions": {
+        "drag": "Drag the \"Save to Chat2API\" button above into your bookmark bar.",
+        "open": "Open the provider login page below and sign in.",
+        "click": "While still on the provider page, click the bookmarklet in your bookmark bar.",
+        "wait": "Come back here — the token will be picked up automatically."
+      },
+      "openLogin": "Open login page · {{host}}",
+      "waiting": "Waiting for bookmarklet…",
+      "timeLeft": "time left",
+      "success": "Token received and validated. Saving account…",
+      "expired": "Ticket expired. Click \"Generate bookmarklet\" to try again.",
+      "ticketUsed": "Ticket has already been used or expired.",
+      "tryAgain": "Try again (new bookmarklet)",
+      "networkError": "Network error",
+      "tokenInvalid": "Server rejected the token",
+      "manualFallback": "Manual paste (DevTools)",
+      "manualFallbackAdvanced": "Manual paste from DevTools (advanced)"
+    }
   },
   "models": {
     "title": "Model Management",

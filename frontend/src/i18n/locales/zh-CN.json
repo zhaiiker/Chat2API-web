@@ -850,7 +850,33 @@
     "failed": "失败",
     "cancelled": "已取消",
     "loginTimeout": "登录超时，请重试",
-    "help": "帮助"
+    "help": "帮助",
+    "bookmarklet": {
+      "title": "书签自动获取",
+      "description": "使用书签自动提取 {{provider}} 的 Token — 无需打开开发者工具",
+      "generate": "生成书签",
+      "generating": "正在生成书签…",
+      "dragHint": "拖动此链接到书签栏：",
+      "dragButton": "保存到 Chat2API",
+      "clickWarning": "请将此链接拖到书签栏，然后在 {{provider}} 页面上点击它。",
+      "instructions": {
+        "drag": "将上方的「保存到 Chat2API」按钮拖入浏览器书签栏。",
+        "open": "点击下方按钮打开供应商登录页，完成登录。",
+        "click": "在供应商页面点击书签栏里的书签。",
+        "wait": "回到这里 — Token 会自动获取。"
+      },
+      "openLogin": "打开登录页面 · {{host}}",
+      "waiting": "等待书签点击…",
+      "timeLeft": "剩余时间",
+      "success": "Token 已接收并验证，正在保存账户…",
+      "expired": "书签已过期，请点击「生成书签」重试。",
+      "ticketUsed": "书签已使用或过期。",
+      "tryAgain": "重试（生成新书签）",
+      "networkError": "网络错误",
+      "tokenInvalid": "服务端拒绝了 Token",
+      "manualFallback": "手动粘贴 (DevTools)",
+      "manualFallbackAdvanced": "手动从开发者工具粘贴（高级）"
+    }
   },
   "models": {
     "title": "模型管理",
