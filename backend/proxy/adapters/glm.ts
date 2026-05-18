@@ -221,7 +221,11 @@ export class GLMAdapter {
         timeout: 60000,
       })
       fileData = Buffer.from(response.data)
-      mimeType = response.headers['content-type'] || mime.lookup(filename) || 'application/octet-stream'
+      // axios v1's response.headers values are typed as string | number | true | string[] | AxiosHeaders,
+      // so narrow to a real string before falling back to the mime lookup.
+      const rawContentType = response.headers['content-type']
+      const contentTypeHeader = typeof rawContentType === 'string' ? rawContentType : undefined
+      mimeType = contentTypeHeader || mime.lookup(filename) || 'application/octet-stream'
     }
 
     const formData = new FormData()
