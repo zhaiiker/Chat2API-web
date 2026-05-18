@@ -40,7 +40,6 @@
     "axios": "^1.7.7",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
-    "conf": "^15.1.0",
     "dotenv": "^17.4.2",
     "eventsource-parser": "^3.0.6",
     "i18next": "^25.8.11",

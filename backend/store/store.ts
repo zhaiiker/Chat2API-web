@@ -1,7 +1,9 @@
 /**
  * Credential Storage Module - Core Storage Implementation
- * Uses electron-store for persistent storage
- * Uses Electron's safeStorage API for sensitive data encryption
+ * Persists configuration as JSON via the in-tree `JsonStore` helper, and
+ * encrypts sensitive credentials with AES-256-GCM using a key derived from
+ * `CHAT2API_ENCRYPTION_KEY` (or auto-generated and persisted to disk on
+ * first use).
  */
 
 import { homedir } from 'os'
@@ -9,6 +11,7 @@ import { join } from 'path'
 import * as crypto from 'crypto'
 import * as fs from 'fs'
 
+import { JsonStore } from './jsonStore'
 import {
   StoreSchema,
   AppConfig,
@@ -42,13 +45,14 @@ import { normalizeToolCallingConfig } from '../shared/toolCalling'
 import { AppLogManager } from '../appLogs/manager'
 import type { AppLogFilter } from '../appLogs/types'
 
-// Use conf instead of electron-store
+// Use a tiny in-tree JSON store. Originally this was `conf` / `electron-store`,
+// but `conf` went pure-ESM and broke the CommonJS backend build.
 const configName = 'data'
 
 /**
  * Storage Instance Type Definition
  */
-type StoreType = any
+type StoreType = JsonStore<StoreSchema>
 
 /**
  * Storage Manager Class
@@ -92,12 +96,10 @@ class StoreManager {
     }
 
     try {
-      const { default: Conf } = await import('conf')
-      this.store = new Conf({
-        projectName: 'chat2api',
-        configName: 'data',
+      this.store = new JsonStore<StoreSchema>({
+        configName,
         cwd: storagePath,
-        defaults: this.getDefaultData() as Record<string, any>
+        defaults: this.getDefaultData(),
       })
 
       await this.initializeAppLogManager(storagePath)
@@ -112,11 +114,10 @@ class StoreManager {
       // Try to recover by backing up corrupted data and reinitializing
       try {
         await this.recoverFromCorruptedData(storagePath)
-        this.store = new Conf({
-          projectName: 'chat2api',
-          configName: 'data',
+        this.store = new JsonStore<StoreSchema>({
+          configName,
           cwd: storagePath,
-          defaults: this.getDefaultData()
+          defaults: this.getDefaultData(),
         })
         await this.initializeAppLogManager(storagePath)
         await this.initializeRequestLogManager(storagePath)
