@@ -19,7 +19,7 @@ const router = new Router({ prefix: '/v0/management/config' })
 
 router.use(managementAuthMiddleware)
 
-const SENSITIVE_KEYS = ['managementApiSecret', 'apiKeys', 'credentials']
+const SENSITIVE_KEYS = ['managementApiSecret', 'passwordHash', 'passwordSalt', 'credentials']
 
 function maskSensitiveValue(value: unknown, key?: string): unknown {
   if (typeof value === 'string') {
