@@ -145,7 +145,58 @@ export const ApiService = {
     validateToken: (providerId: string, providerType: string, credentials: Record<string, string>) => apiClient.post('/oauth/validate_token', { providerId, providerType, credentials }),
     refreshToken: (providerId: string, providerType: string, credentials: Record<string, string>) => apiClient.post('/oauth/refresh_token', { providerId, providerType, credentials }),
     getStatus: () => apiClient.get('/oauth/status'),
-    
+
+    /**
+     * Bookmarklet flow.
+     *
+     * `issue` mints a single-use ticket and returns the ready-to-drag
+     * `javascript:` href the operator drops into their bookmark bar.
+     * The bookmarklet itself POSTs to the public ingest endpoint with
+     * the ticket; the UI then polls `poll` to pick up the result.
+     *
+     * `poll` returns `{ state: 'pending' }` (HTTP 202) while the
+     * bookmarklet hasn't fired yet, and the OAuthResult once it has.
+     * The poll consumes the ticket on first read, so callers must
+     * surface the result they get back.
+     *
+     * `cancel` drops a still-pending ticket (e.g. when the dialog is
+     * closed before the operator clicked the bookmarklet).
+     */
+    bookmarklet: {
+      issue: (
+        providerId: string,
+        providerType: string,
+      ): Promise<{
+        ticket: string
+        expiresAt: number
+        ttlMs: number
+        ingestUrl: string
+        providerType: string
+        providerId: string
+        bookmarklet: {
+          href: string
+          source: string
+          expectedOrigin?: string
+        }
+      }> =>
+        apiClient.post('/oauth/bookmarklet/issue', { providerId, providerType }),
+      poll: (
+        ticket: string,
+      ): Promise<
+        | { state: 'pending'; expiresAt: number }
+        | { state: 'completed'; result: OAuthResult }
+      > => {
+        // The ingest path returns 202 Accepted while still pending. The
+        // shared response interceptor unwraps `{ success, data }`, so a
+        // `state: 'pending'` body comes through cleanly. We don't need
+        // axios to treat 202 as an error — its default `validateStatus`
+        // already accepts 2xx.
+        return apiClient.get(`/oauth/bookmarklet/poll/${encodeURIComponent(ticket)}`)
+      },
+      cancel: (ticket: string): Promise<{ cancelled: boolean }> =>
+        apiClient.delete(`/oauth/bookmarklet/${encodeURIComponent(ticket)}`),
+    },
+
     // Stubs for unsupported methods
     startInAppLogin: async (): Promise<OAuthResult> => { throw new Error('Not supported in web version') },
     cancelInAppLogin: async (): Promise<void> => {},

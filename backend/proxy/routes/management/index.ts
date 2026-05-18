@@ -13,6 +13,7 @@ import sessionsRouter from './sessions'
 import statisticsRouter from './statistics'
 import proxyRouter from './proxy'
 import toolCallingRouter from './toolCalling'
+import bookmarkletRouter from './oauth/bookmarklet'
 import oauthRouter from './oauth/index'
 import logsRouter from './logs'
 import promptsRouter from './prompts'
@@ -29,6 +30,7 @@ export {
   statisticsRouter,
   proxyRouter,
   toolCallingRouter,
+  bookmarkletRouter,
   oauthRouter,
   logsRouter,
   promptsRouter,
@@ -49,6 +51,11 @@ export default [
   statisticsRouter,
   proxyRouter,
   toolCallingRouter,
+  // The bookmarklet router has its own public ingest endpoint; it must
+  // be registered *before* oauthRouter so its path-specific handlers
+  // are matched before oauthRouter's blanket `router.use(auth)` would
+  // otherwise apply to the same `/v0/management/oauth` prefix.
+  bookmarkletRouter,
   oauthRouter,
   logsRouter,
   promptsRouter,

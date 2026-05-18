@@ -21,10 +21,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   AlertCircle,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   ExternalLink,
   Loader2,
 } from 'lucide-react'
 import { ApiService } from '@/services/api'
+import { BookmarkletPanel } from './BookmarkletPanel'
 
 type StorageType = 'localStorage' | 'cookie' | 'network'
 
@@ -244,6 +247,7 @@ export function TokenExtractionGuide({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [showManual, setShowManual] = useState(false)
 
   if (!guide) {
     return (
@@ -302,100 +306,127 @@ export function TokenExtractionGuide({
 
   return (
     <div className="space-y-4">
-      <Button
+      {/* ── Recommended: Bookmarklet ── */}
+      <BookmarkletPanel
+        providerId={providerId}
+        providerType={providerType}
+        providerName={providerName}
+        loginUrl={guide.loginUrl}
+        onSuccess={onSuccess}
+      />
+
+      {/* ── Fallback: Manual DevTools paste (collapsed by default) ── */}
+      <button
         type="button"
-        onClick={openLoginPage}
-        className="w-full"
-        variant="default"
+        onClick={() => setShowManual(!showManual)}
+        className="flex w-full items-center gap-1.5 rounded-md border px-3 py-2 text-sm text-muted-foreground hover:bg-muted/50 transition-colors"
       >
-        <ExternalLink className="mr-2 h-4 w-4" />
-        Open login page · {new URL(guide.loginUrl).hostname}
-      </Button>
-
-      <div className="rounded-md border bg-muted/40 p-3">
-        <p className="text-xs font-medium text-muted-foreground mb-1">
-          Where to find the token
-        </p>
-        <p className="text-sm">
-          <code className="font-mono text-xs bg-background px-1.5 py-0.5 rounded border">
-            {guide.storageHint}
-          </code>
-        </p>
-        <ol className="mt-3 list-decimal list-inside space-y-1.5 text-xs text-muted-foreground">
-          {guide.steps.map((s, i) => (
-            <li key={i}>{s}</li>
-          ))}
-        </ol>
-      </div>
-
-      <div className="space-y-1.5">
-        <label className="text-sm font-medium">
-          {guide.tokenLabel}
-          <span className="ml-1 font-mono text-xs text-muted-foreground">
-            ({guide.tokenKey})
-          </span>
-        </label>
-        <Textarea
-          value={token}
-          onChange={(e) => setToken(e.target.value)}
-          placeholder={guide.placeholder ?? `Paste the ${guide.tokenLabel} here`}
-          rows={3}
-          className="font-mono text-xs"
-          disabled={submitting}
-        />
-      </div>
-
-      {(guide.extraFields ?? []).map((f) => (
-        <div key={f.name} className="space-y-1.5">
-          <label className="text-sm font-medium">
-            {f.label}
-            {f.storageHint && (
-              <span className="ml-1 text-xs text-muted-foreground font-normal">
-                — {f.storageHint}
-              </span>
-            )}
-          </label>
-          <Textarea
-            value={extras[f.name] ?? ''}
-            onChange={(e) =>
-              setExtras((s) => ({ ...s, [f.name]: e.target.value }))
-            }
-            placeholder={f.placeholder ?? `Paste the ${f.label}`}
-            rows={2}
-            className="font-mono text-xs"
-            disabled={submitting}
-          />
-        </div>
-      ))}
-
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      {success && (
-        <Alert>
-          <CheckCircle2 className="h-4 w-4" />
-          <AlertDescription>{success}</AlertDescription>
-        </Alert>
-      )}
-
-      <Button
-        type="button"
-        onClick={handleSubmit}
-        disabled={submitting}
-        className="w-full"
-      >
-        {submitting ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Validating…
-          </>
+        {showManual ? (
+          <ChevronDown className="h-3.5 w-3.5" />
         ) : (
-          'Save and continue'
+          <ChevronRight className="h-3.5 w-3.5" />
         )}
-      </Button>
+        Manual paste from DevTools (advanced)
+      </button>
+
+      {showManual && (
+        <div className="space-y-4 pl-2 border-l-2 border-muted">
+          <Button
+            type="button"
+            onClick={openLoginPage}
+            className="w-full"
+            variant="outline"
+          >
+            <ExternalLink className="mr-2 h-4 w-4" />
+            Open login page · {new URL(guide.loginUrl).hostname}
+          </Button>
+
+          <div className="rounded-md border bg-muted/40 p-3">
+            <p className="text-xs font-medium text-muted-foreground mb-1">
+              Where to find the token
+            </p>
+            <p className="text-sm">
+              <code className="font-mono text-xs bg-background px-1.5 py-0.5 rounded border">
+                {guide.storageHint}
+              </code>
+            </p>
+            <ol className="mt-3 list-decimal list-inside space-y-1.5 text-xs text-muted-foreground">
+              {guide.steps.map((s, i) => (
+                <li key={i}>{s}</li>
+              ))}
+            </ol>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">
+              {guide.tokenLabel}
+              <span className="ml-1 font-mono text-xs text-muted-foreground">
+                ({guide.tokenKey})
+              </span>
+            </label>
+            <Textarea
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder={guide.placeholder ?? `Paste the ${guide.tokenLabel} here`}
+              rows={3}
+              className="font-mono text-xs"
+              disabled={submitting}
+            />
+          </div>
+
+          {(guide.extraFields ?? []).map((f) => (
+            <div key={f.name} className="space-y-1.5">
+              <label className="text-sm font-medium">
+                {f.label}
+                {f.storageHint && (
+                  <span className="ml-1 text-xs text-muted-foreground font-normal">
+                    — {f.storageHint}
+                  </span>
+                )}
+              </label>
+              <Textarea
+                value={extras[f.name] ?? ''}
+                onChange={(e) =>
+                  setExtras((s) => ({ ...s, [f.name]: e.target.value }))
+                }
+                placeholder={f.placeholder ?? `Paste the ${f.label}`}
+                rows={2}
+                className="font-mono text-xs"
+                disabled={submitting}
+              />
+            </div>
+          ))}
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          {success && (
+            <Alert>
+              <CheckCircle2 className="h-4 w-4" />
+              <AlertDescription>{success}</AlertDescription>
+            </Alert>
+          )}
+
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="w-full"
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Validating…
+              </>
+            ) : (
+              'Save and continue'
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

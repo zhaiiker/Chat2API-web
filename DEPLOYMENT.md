@@ -133,6 +133,7 @@ server {
 | `CHAT2API_DATA_DIR` | `~/.chat2api` | Directory to persist config, logs, and encryption key. |
 | `CHAT2API_MANAGEMENT_SECRET` | _(auto)_ | Pin the management API secret. Recommended in production. |
 | `CHAT2API_DISABLE_MANAGEMENT_API` | `0` | Set to `1` to disable the management API and web UI auth surface. |
+| `CHAT2API_DISABLE_BOOKMARKLET` | `0` | Set to `1` to disable the bookmarklet OAuth ingest flow (`/v0/management/oauth/bookmarklet/*`). |
 | `CHAT2API_ENCRYPTION_KEY` | _(auto)_ | Pin the credential encryption key. |
 | `CHAT2API_FRONTEND_DIR` | _auto-detected_ | Path to the built frontend. Override only when running unconventionally. |
 
@@ -185,81 +186,74 @@ re-entry.
 
 The Electron edition used to spawn a Chromium window so you could log
 into a provider (DeepSeek, GLM, Kimi, …) and have its token captured
-automatically. A pure-web build cannot pop a window on the operator's
-machine, so the web UI walks you through the same two clicks instead:
+automatically. The web edition replaces that with a **bookmarklet**: a
+tiny `javascript:` link that you drag into your browser's bookmark bar
+once and click after signing in. It reads the auth value out of
+`localStorage` / `cookie` and POSTs it back to Chat2API for you — no
+DevTools, no copy / paste.
+
+### Recommended flow (bookmarklet)
 
 1. **Add Provider → choose a built-in provider → OAuth Login tab.**
-2. **Click "Open login page"** — the provider opens in a new browser tab.
-3. **Sign in** as you normally would.
-4. **Press F12 → Application** in DevTools, navigate to the exact storage
-   bucket the UI tells you (e.g. `Local Storage → chat.deepseek.com →
-   userToken`), and copy the value.
-5. **Paste it back into the dialog and click Save.** Chat2API validates
-   the token against the provider's API before storing it.
+2. **Drag "Save to Chat2API" into your bookmark bar.** The button is a
+   real `javascript:` link; the UI generates one bookmarklet per
+   provider, embedding a one-time ticket so it can talk to Chat2API
+   without exposing your management secret.
+3. **Click "Open login page"** — the provider opens in a new browser tab.
+4. **Sign in** as you normally would.
+5. **Click the "Save to Chat2API" bookmark** while still on the
+   provider's tab. The bookmarklet reads the right `localStorage` /
+   cookie value and uploads it. The Chat2API tab automatically picks
+   up the token, validates it against the provider's API, and saves
+   the account.
+
+If you can't drag the link (corporate browsers sometimes disable that),
+fall back to **Manual Input** in the same dialog and paste the token by
+hand from DevTools — the bookmarklet is purely a convenience layer on
+top of the same `/v0/management/oauth/login_with_token` endpoint.
 
 Tokens are persisted under `CHAT2API_DATA_DIR` encrypted with AES-256-GCM
 using the same key chain described above (`CHAT2API_ENCRYPTION_KEY` or
 the auto-generated `.encryption_key` file).
 
-### Optional: VNC sidecar for fully automatic OAuth
+### Why a bookmarklet (and not a remote browser)
 
-Some operators don't want to manually copy tokens. The
-[AIStudioToAPI](https://github.com/iBUHub/AIStudioToAPI) project shows
-how to expose a containerised browser via noVNC so the operator can
-just click around in a remote browser and have cookies harvested
-automatically.
+A server-side browser pipeline (a containerised browser exposed through
+a remote-desktop web viewer, or Playwright running inside the Chat2API
+image) would also automate token capture, but both options add roughly
+~2 GB of image weight and a non-trivial attack surface. Every provider
+Chat2API supports keeps its auth state in `localStorage` or cookies on
+a single origin — the browser already has everything we need, the
+server just has to receive a string. So the bookmarklet does it
+directly from your normal browser, with zero extra containers.
 
-We intentionally **don't** bake VNC into the main Chat2API image — it
-would balloon the image from ~150 MB to ~2 GB and require Xvfb /
-x11vnc / websockify / a real browser binary on top of Node. Instead,
-run a small noVNC sidecar next to Chat2API and use it only when you
-actually need to grab a session.
+### Tickets and the public ingest endpoint
 
-A reasonable sidecar pattern:
+When you open the OAuth Login tab the backend mints a short-lived
+**ticket** (random 32-byte token, default TTL 10 minutes, single-use)
+and bakes it into the bookmarklet. The bookmarklet then POSTs to:
 
-```yaml
-# docker-compose.vnc.yml — pair with the regular docker-compose.yml
-services:
-  chat2api:
-    # … existing service block …
-
-  novnc:
-    # Any pre-built noVNC + browser container works here. Two popular
-    # choices are listed below; pick one and pin a digest.
-    #
-    #   image: kasmweb/firefox:1.16.0
-    #   image: lscr.io/linuxserver/firefox:latest
-    image: kasmweb/firefox:1.16.0
-    container_name: chat2api-novnc
-    restart: unless-stopped
-    ports:
-      # Only bind to localhost - put TLS in front of it via your
-      # reverse proxy if you want to expose it publicly.
-      - "127.0.0.1:6901:6901"
-    environment:
-      VNC_PW: "change-me-please"
-    shm_size: "1gb"
+```
+POST /v0/management/oauth/bookmarklet/ingest
+Content-Type: application/json
+{ "ticket": "...", "credentials": { ... } }
 ```
 
-Workflow:
+That endpoint is the **only** management route that does not require
+the bearer secret — the ticket is the auth, and it self-destructs on
+first use or on TTL expiry. If you operate Chat2API behind a strict
+CDN / WAF, allow `POST /v0/management/oauth/bookmarklet/ingest` from
+the provider domains (DeepSeek, ChatGLM, Kimi, etc.) so the
+bookmarklet's cross-origin `fetch` isn't blocked.
 
-1. Bring up both: `docker compose -f docker-compose.yml -f docker-compose.vnc.yml up -d`.
-2. Open `http://your-server:6901/` (or the path your reverse proxy
-   serves it under) and log in to the noVNC web client.
-3. Inside the remote browser, sign in to whichever provider you need.
-4. Open DevTools (works inside noVNC just like a local browser),
-   copy the token from the same Application → Local Storage / Cookies
-   path the Chat2API UI tells you about.
-5. Paste it back into the Chat2API dialog at `http://your-server:8080`.
+If you want to disable the bookmarklet flow entirely, set
+`CHAT2API_DISABLE_BOOKMARKLET=1`. The ingest endpoint then refuses
+every request with a 404 and the UI hides the "drag to bookmark bar"
+button.
 
-This keeps the security surface tight (the VNC container only runs
-when you ask for it, and you can stop it with `docker compose stop
-novnc` afterwards) and avoids coupling Chat2API's release cadence to
-a heavyweight browser image.
+### Power users: a browser extension is the natural next step
 
-If you want a tighter integration than "manually paste between two tabs"
-— for example, a button in Chat2API that automatically harvests cookies
-from the noVNC container — open an issue describing your provider mix
-and we can scope a small server-side helper that drives Playwright
-inside the sidecar. The current built-in flow keeps the main image
-slim and works for everyone.
+If you find yourself adding accounts often, a small WebExtension that
+watches the provider domains and forwards tokens automatically is a
+thin layer on top of the same ingest endpoint. We don't ship one
+today; open a feature request if you'd like to collaborate on it.
