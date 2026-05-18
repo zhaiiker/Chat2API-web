@@ -147,7 +147,7 @@ export class DeepSeekAdapter extends BaseOAuthAdapter {
         validateStatus: () => true,
       })
       
-      console.log('[DeepSeek OAuth] Response:', response.status, response.data)
+      console.log('[DeepSeek OAuth] Response status:', response.status)
       
       if (response.status !== 200 || !response.data) {
         return {

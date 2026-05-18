@@ -4,7 +4,7 @@
  */
 
 import type { Context, Next } from 'koa'
-import { randomUUID } from 'crypto'
+import { randomUUID, timingSafeEqual } from 'crypto'
 import { storeManager } from '../../store/store'
 
 /**
@@ -47,6 +47,19 @@ function createUnauthorizedResponse(
       message,
     },
   }
+}
+
+/**
+ * Timing-safe string comparison to prevent timing attacks on secret validation.
+ */
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    // Still perform a comparison to avoid short-circuit timing leak
+    const dummy = Buffer.alloc(b.length)
+    timingSafeEqual(dummy, Buffer.from(b))
+    return false
+  }
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b))
 }
 
 /**
@@ -131,7 +144,7 @@ export async function managementAuthMiddleware(ctx: Context, next: Next): Promis
     return
   }
 
-  if (providedToken !== managementConfig.managementApiSecret) {
+  if (!safeEqual(providedToken, managementConfig.managementApiSecret)) {
     ctx.status = 401
     ctx.body = createUnauthorizedResponse(
       'Invalid management API secret',

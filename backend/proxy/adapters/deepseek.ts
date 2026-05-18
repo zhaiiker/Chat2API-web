@@ -111,9 +111,7 @@ export class DeepSeekAdapter {
   constructor(provider: Provider, account: Account) {
     this.provider = provider
     this.account = account
-    console.log('[DeepSeek] Account credentials:', JSON.stringify(account.credentials, null, 2))
     this.token = account.credentials.token || account.credentials.apiKey || account.credentials.refreshToken || ''
-    console.log('[DeepSeek] Using token:', this.token.substring(0, 20) + '...')
   }
 
   private async acquireToken(): Promise<string> {
@@ -137,8 +135,6 @@ export class DeepSeekAdapter {
       validateStatus: () => true,
     })
 
-    console.log('[DeepSeek] Token response status:', result.status)
-    
     if (result.status === 401 || result.status === 403) {
       throw new Error(`Token invalid or expired, please get a new Token`)
     }
@@ -151,7 +147,6 @@ export class DeepSeekAdapter {
     const bizData = result.data?.data?.biz_data || result.data?.biz_data
     if (!bizData?.token) {
       const errorMsg = result.data?.msg || result.data?.data?.biz_msg || 'Unknown error'
-      console.log('[DeepSeek] Token response data:', JSON.stringify(result.data, null, 2))
       throw new Error(`Failed to acquire token: ${errorMsg}`)
     }
 
@@ -188,7 +183,7 @@ export class DeepSeekAdapter {
       }
     )
 
-    console.log('[DeepSeek] Create session response:', JSON.stringify(result.data, null, 2))
+    console.log('[DeepSeek] Create session completed, status:', result.status)
 
     // Response structure: { code: 0, data: { biz_code: 0, biz_data: { id: "..." } } }
     const bizData = result.data?.data?.biz_data || result.data?.biz_data
@@ -218,7 +213,7 @@ export class DeepSeekAdapter {
         }
       )
 
-      console.log('[DeepSeek] Delete session response:', JSON.stringify(result.data, null, 2))
+      console.log('[DeepSeek] Delete session completed, status:', result.status)
 
       const success = result.status === 200 && result.data?.code === 0
       if (success) {

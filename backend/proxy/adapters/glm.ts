@@ -146,7 +146,7 @@ export class GLMAdapter {
       }
     )
 
-    console.log('[GLM] Token response:', JSON.stringify(response.data, null, 2))
+    console.log('[GLM] Token response received, status:', response.status)
     const { code, status, message } = response.data || {}
     const isSuccess = code === 0 || status === 0
     if (response.status !== 200 || !isSuccess) {
@@ -637,7 +637,7 @@ GLM STRICT RULES:
           }
         )
 
-        console.log('[GLM] Get conversation list page', page, 'response:', JSON.stringify(listResponse.data, null, 2))
+        console.log('[GLM] Get conversation list page', page)
 
         const { status, result } = listResponse.data || {}
         if (listResponse.status !== 200 || status !== 0) {
@@ -686,7 +686,7 @@ GLM STRICT RULES:
         }
       )
 
-      console.log('[GLM] Bulk delete response:', JSON.stringify(deleteResponse.data, null, 2))
+      console.log('[GLM] Bulk delete completed')
 
       const deleteResult = deleteResponse.data || {}
       const success = deleteResponse.status === 200 && deleteResult.status === 0

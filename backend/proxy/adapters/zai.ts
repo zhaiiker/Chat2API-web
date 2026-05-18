@@ -541,11 +541,7 @@ export class ZaiAdapter {
 
     console.log('[Z.ai] Response status:', response.status)
     if (response.status !== 200) {
-      console.log('[Z.ai] Request body:', JSON.stringify(requestBody, null, 2))
-      console.log('[Z.ai] Signature:', signature)
-      console.log('[Z.ai] Timestamp:', timestamp)
-      console.log('[Z.ai] RequestId:', requestId)
-      console.log('[Z.ai] UserId:', userId)
+      console.log('[Z.ai] Error: non-200 response, requestId:', requestId)
       if (response.data && typeof response.data.on === 'function') {
         const chunks: Buffer[] = []
         response.data.on('data', (chunk: Buffer) => chunks.push(chunk))

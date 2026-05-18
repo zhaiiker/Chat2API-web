@@ -193,7 +193,7 @@ export class GLMAdapter extends BaseOAuthAdapter {
         }
       )
       
-      console.log('[GLM OAuth] Response:', response.status, response.data)
+      console.log('[GLM OAuth] Response status:', response.status)
       
       if (response.status !== 200) {
         return {

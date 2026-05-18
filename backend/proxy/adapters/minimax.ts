@@ -219,7 +219,7 @@ export class MiniMaxAdapter {
       }
     }
 
-    console.log('[MiniMax] Token parsed - realUserID:', this.realUserID, 'jwtToken:', this.jwtToken.substring(0, 30) + '...')
+    console.log('[MiniMax] Token parsed - realUserID:', this.realUserID ? '(set)' : '(empty)')
   }
 
   private async requestDeviceInfo(): Promise<DeviceInfo> {

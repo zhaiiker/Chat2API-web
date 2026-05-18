@@ -680,13 +680,6 @@ class StoreManager {
       return null
     }
     
-    console.log('[Store] Update account:', {
-      id,
-      updatesCredentials: updates.credentials,
-      oldCredentials: accounts[index].credentials,
-      oldCredentialsDecrypted: this.decryptCredentials(accounts[index].credentials),
-    })
-    
     const updatedAccount: Account = {
       ...accounts[index],
       ...updates,
@@ -695,21 +688,10 @@ class StoreManager {
     
     if (updates.credentials) {
       updatedAccount.credentials = this.encryptCredentials(updates.credentials)
-      console.log('[Store] Encrypted credentials:', updatedAccount.credentials)
-      console.log('[Store] Old credentials:', accounts[index].credentials)
-      console.log('[Store] Credentials match:', JSON.stringify(updatedAccount.credentials) === JSON.stringify(accounts[index].credentials))
     }
     
     accounts[index] = updatedAccount
     this.store!.set('accounts', accounts)
-    
-    // Verify save was successful
-    const savedAccounts = this.store!.get('accounts') as Account[]
-    const savedAccount = savedAccounts.find(a => a.id === id)
-    console.log('[Store] Verify after save:', {
-      id,
-      savedCredentials: savedAccount?.credentials,
-    })
     
     return {
       ...updatedAccount,

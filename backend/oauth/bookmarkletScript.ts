@@ -58,7 +58,7 @@ export const PROVIDER_TOKEN_SPECS: Record<ProviderType, ProviderTokenSpec> = {
     expectedOrigin: 'https://chat.deepseek.com',
   },
   glm: {
-    storageType: 'localStorage',
+    storageType: 'cookie',
     tokenKey: 'chatglm_refresh_token',
     tokenField: 'token',
     originLabel: 'ChatGLM',

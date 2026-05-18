@@ -76,10 +76,37 @@ export class ProxyServer {
    * Setup middleware
    */
   private setupMiddleware(): void {
+    // CORS middleware: restrict management API to configured origins
     this.app.use(async (ctx, next) => {
-      ctx.set('Access-Control-Allow-Origin', '*')
+      const origin = ctx.get('Origin')
+
+      if (ctx.path.startsWith('/v0/management')) {
+        // Management API: only allow explicitly configured origins.
+        // CHAT2API_CORS_ORIGINS accepts a comma-separated list (e.g. "https://admin.example.com,http://localhost:3000").
+        // If unset, only same-origin requests (no Origin header) are permitted.
+        const allowedRaw = process.env.CHAT2API_CORS_ORIGINS || ''
+        const allowedOrigins = allowedRaw
+          .split(',')
+          .map(o => o.trim())
+          .filter(Boolean)
+
+        if (origin && allowedOrigins.length > 0 && allowedOrigins.includes(origin)) {
+          ctx.set('Access-Control-Allow-Origin', origin)
+          ctx.set('Vary', 'Origin')
+        } else if (!origin) {
+          // Same-origin or non-browser request — allow through without CORS headers
+        } else {
+          // Origin present but not in whitelist — omit CORS headers so the
+          // browser blocks the response.
+        }
+      } else {
+        // Public proxy API (v1): allow any origin since callers are
+        // typically server-side or explicitly trusted clients.
+        ctx.set('Access-Control-Allow-Origin', '*')
+      }
+
       ctx.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-      ctx.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+      ctx.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Management-Secret')
       ctx.set('Access-Control-Max-Age', '86400')
 
       if (ctx.method === 'OPTIONS') {
@@ -91,9 +118,9 @@ export class ProxyServer {
     })
 
     this.app.use(bodyParser({
-      jsonLimit: '50mb',
-      formLimit: '50mb',
-      textLimit: '50mb',
+      jsonLimit: '10mb',
+      formLimit: '10mb',
+      textLimit: '10mb',
     }))
 
     // API Key validation middleware
