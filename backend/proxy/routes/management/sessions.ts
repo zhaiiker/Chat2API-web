@@ -65,6 +65,45 @@ router.get('/sessions', managementAuthMiddleware, async (ctx: Context) => {
   }
 })
 
+// GET / PUT /v0/management/sessions/config
+// Read and update the SessionConfig living inside the global AppConfig.
+// Registered before /sessions/:id so the literal 'config' path isn't
+// captured by the :id wildcard.
+router.get('/sessions/config', managementAuthMiddleware, async (ctx: Context) => {
+  try {
+    const { storeManager } = await import('../../../store/store')
+    const config = storeManager.getConfig()
+    ctx.set('Content-Type', 'application/json')
+    ctx.body = createSuccessResponse(config.sessionConfig)
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to load session config'
+    ctx.status = 500
+    ctx.body = createErrorResponse('internal_error', errorMessage)
+  }
+})
+
+router.put('/sessions/config', managementAuthMiddleware, async (ctx: Context) => {
+  try {
+    const { storeManager } = await import('../../../store/store')
+    const updates = ctx.request.body as Record<string, unknown> | undefined
+    if (!updates || typeof updates !== 'object') {
+      ctx.status = 400
+      ctx.body = createErrorResponse('invalid_request', 'Request body must be a session config object')
+      return
+    }
+    const current = storeManager.getConfig()
+    const updated = storeManager.updateConfig({
+      sessionConfig: { ...current.sessionConfig, ...(updates as any) },
+    })
+    ctx.set('Content-Type', 'application/json')
+    ctx.body = createSuccessResponse(updated.sessionConfig)
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to update session config'
+    ctx.status = 500
+    ctx.body = createErrorResponse('internal_error', errorMessage)
+  }
+})
+
 /**
  * GET /v0/management/sessions/:id
  * Get session by ID with message history

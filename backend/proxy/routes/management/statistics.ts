@@ -22,6 +22,23 @@ const router = new Router({ prefix: '/v0/management' })
 
 router.use(managementAuthMiddleware)
 
+router.get('/statistics/today', async (ctx: Context) => {
+  try {
+    const today = storeManager.getTodayStatistics()
+    ctx.body = {
+      success: true,
+      data: today,
+    } as ManagementApiResponse<typeof today>
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    ctx.status = 500
+    ctx.body = {
+      success: false,
+      error: { code: 'internal_error', message: errorMessage },
+    } as ManagementApiResponse
+  }
+})
+
 router.get('/statistics', async (ctx: Context) => {
   try {
     const proxyStats = proxyStatusManager.getStatistics()

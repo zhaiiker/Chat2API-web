@@ -49,6 +49,72 @@ router.get('/', async (ctx: Context) => {
   }
 })
 
+// Built-in provider catalogue. Registered BEFORE /:id so that the literal
+// path 'builtin' isn't swallowed by the dynamic route.
+router.get('/builtin', async (ctx: Context) => {
+  try {
+    const { getBuiltinProviders } = await import('../../../providers/builtin')
+    ctx.set('Content-Type', 'application/json')
+    ctx.body = createSuccessResponse(getBuiltinProviders())
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to load built-in providers'
+    ctx.status = 500
+    ctx.body = createErrorResponse('internal_error', errorMessage)
+  }
+})
+
+// Check status of all configured providers in parallel. Same ordering
+// reason as /builtin above.
+router.post('/check_all_status', async (ctx: Context) => {
+  try {
+    const { ProviderChecker } = await import('../../../providers/checker')
+    const providers = ProviderManager.getAll()
+    const results = await Promise.all(
+      providers.map(async (p) => {
+        try {
+          return await ProviderChecker.checkProviderStatus(p)
+        } catch (error) {
+          return {
+            providerId: p.id,
+            status: 'offline' as const,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          }
+        }
+      }),
+    )
+    const map: Record<string, typeof results[number]> = {}
+    for (const r of results) {
+      map[r.providerId] = r
+    }
+    ctx.set('Content-Type', 'application/json')
+    ctx.body = createSuccessResponse(map)
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to check providers'
+    ctx.status = 500
+    ctx.body = createErrorResponse('internal_error', errorMessage)
+  }
+})
+
+router.post('/:id/check_status', async (ctx: Context) => {
+  try {
+    const id = ctx.params.id
+    const provider = ProviderManager.getById(id)
+    if (!provider) {
+      ctx.status = 404
+      ctx.body = createErrorResponse('not_found', 'Provider not found')
+      return
+    }
+    const { ProviderChecker } = await import('../../../providers/checker')
+    const result = await ProviderChecker.checkProviderStatus(provider)
+    ctx.set('Content-Type', 'application/json')
+    ctx.body = createSuccessResponse(result)
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to check provider'
+    ctx.status = 500
+    ctx.body = createErrorResponse('internal_error', errorMessage)
+  }
+})
+
 router.get('/:id', async (ctx: Context) => {
   try {
     const id = ctx.params.id
