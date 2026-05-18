@@ -17,10 +17,10 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/renderer/src/*"],
-      "@shared/*": ["./src/shared/*"]
+      "@/*": ["./frontend/src/*"],
+      "@shared/*": ["./frontend/src/shared/*"]
     }
   },
-  "include": ["src/renderer/src/**/*.ts", "src/renderer/src/**/*.tsx", "src/shared/**/*.ts"],
+  "include": ["frontend/src/**/*.ts", "frontend/src/**/*.tsx", "frontend/src/shared/**/*.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

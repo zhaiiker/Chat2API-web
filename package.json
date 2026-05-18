@@ -10,23 +10,13 @@
   "homepage": "https://github.com/chat2api/Chat2API-Manager",
   "license": "GPL-3.0",
   "scripts": {
-    "dev": "bash scripts/dev.sh",
-    "dev:win": "electron-vite dev",
-    "check:source-artifacts": "node scripts/check-source-artifacts.js",
-    "build": "npm run check:source-artifacts && electron-vite build",
-    "preview": "electron-vite preview",
-    "start": "electron-vite preview",
-    "start:sandbox": "electron . --no-sandbox",
-    "postinstall": "electron-builder install-app-deps",
-    "prebuild:check": "node scripts/prebuild-check.js",
-    "build:unpack": "npm run build && electron-builder --dir",
-    "build:win": "npm run build && electron-builder --win --x64",
-    "build:win32": "npm run build && electron-builder --win --ia32",
-    "build:mac": "npm run build && electron-builder --mac",
-    "build:mac-arm": "npm run build && electron-builder --mac --arm64",
-    "build:linux": "npm run build && electron-builder --linux",
-    "build:all": "npm run build && electron-builder --win --mac --linux",
-    "release": "node scripts/release.js"
+    "dev:backend": "npx ts-node --project tsconfig.backend.json backend/index.ts",
+    "dev:frontend": "vite",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:backend": "tsc --project tsconfig.backend.json",
+    "build:frontend": "vite build",
+    "build": "npm run build:backend && npm run build:frontend",
+    "start": "node dist/backend/index.js"
   },
   "dependencies": {
     "@koa/router": "^15.3.0",
@@ -47,7 +37,8 @@
     "axios": "^1.7.7",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
-    "electron-store": "^10.0.0",
+    "conf": "^15.1.0",
+    "dotenv": "^17.4.2",
     "electron-updater": "^6.3.9",
     "eventsource-parser": "^3.0.6",
     "i18next": "^25.8.11",
@@ -80,168 +71,11 @@
     "@vitejs/plugin-react": "^4.3.3",
     "autoprefixer": "^10.4.20",
     "canvas": "^3.2.1",
-    "electron": "^33.0.2",
-    "electron-builder": "^25.1.8",
-    "electron-vite": "^2.3.0",
+    "concurrently": "^9.2.1",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.14",
+    "ts-node": "^10.9.2",
     "typescript": "^5.6.3",
     "vite": "^5.4.10"
-  },
-  "build": {
-    "appId": "com.chat2api.manager",
-    "productName": "Chat2API",
-    "copyright": "Copyright © 2026 Chat2API Team",
-    "directories": {
-      "output": "dist",
-      "buildResources": "build"
-    },
-    "files": [
-      "out/**/*",
-      "package.json",
-      "!node_modules/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "build",
-        "to": "build",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "sha3_wasm_bg.7b9ca65ddd.wasm",
-        "to": "sha3_wasm_bg.7b9ca65ddd.wasm"
-      }
-    ],
-    "asar": true,
-    "asarUnpack": [
-      "**/*.node",
-      "**/node_modules/electron-updater/**/*"
-    ],
-    "fileAssociations": [
-      {
-        "ext": "c2a",
-        "name": "Chat2API Config",
-        "description": "Chat2API 配置文件",
-        "role": "Editor"
-      }
-    ],
-    "protocols": [
-      {
-        "name": "Chat2API",
-        "schemes": [
-          "chat2api"
-        ]
-      }
-    ],
-    "mac": {
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "arm64"
-          ]
-        }
-      ],
-      "category": "public.app-category.utilities",
-      "icon": "build/icon.png",
-      "artifactName": "${productName}-${version}-mac-${arch}.${ext}",
-      "hardenedRuntime": true,
-      "gatekeeperAssess": false
-    },
-    "dmg": {
-      "contents": [
-        {
-          "x": 130,
-          "y": 220
-        },
-        {
-          "x": 410,
-          "y": 220,
-          "type": "link",
-          "path": "/Applications"
-        }
-      ]
-    },
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "build/icon.ico",
-      "artifactName": "${productName}-${version}-${arch}-setup.${ext}"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "allowElevation": true,
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico",
-      "installerHeaderIcon": "build/icon.ico",
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Chat2API",
-      "license": "LICENSE",
-      "artifactName": "${productName}-${version}-${arch}-setup.${ext}"
-    },
-    "portable": {
-      "artifactName": "${productName}-${version}-${arch}-portable.${ext}"
-    },
-    "linux": {
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        },
-        {
-          "target": "deb",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "tar.gz",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "category": "Utility",
-      "icon": "build/icon.png",
-      "maintainer": "Chat2API Team <support@chat2api.com>",
-      "artifactName": "${productName}-${version}-${arch}.${ext}",
-      "desktop": {
-        "Name": "Chat2API",
-        "Comment": "统一管理多个 AI 服务提供商",
-        "Categories": "Utility;Network;",
-        "StartupWMClass": "chat2api"
-      }
-    },
-    "appImage": {
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
-    },
-    "deb": {
-      "priority": "optional",
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
-    },
-    "publish": {
-      "provider": "github",
-      "owner": "xiaoY233",
-      "repo": "Chat2API"
-    }
   }
 }
