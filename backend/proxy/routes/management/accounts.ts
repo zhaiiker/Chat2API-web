@@ -248,6 +248,69 @@ router.delete('/accounts/:id', managementAuthMiddleware, async (ctx: Context) =>
 })
 
 /**
+ * POST /v0/management/accounts/validate_token
+ * Validate credentials before creating an account.
+ * Body: { providerId: string, credentials: Record<string, string> }
+ */
+router.post('/accounts/validate_token', managementAuthMiddleware, async (ctx: Context) => {
+  try {
+    const body = ctx.request.body as { providerId?: string; credentials?: Record<string, string> }
+    
+    if (!body.providerId) {
+      ctx.status = 400
+      ctx.body = createErrorResponse('invalid_request', 'Missing providerId')
+      return
+    }
+    if (!body.credentials || typeof body.credentials !== 'object') {
+      ctx.status = 400
+      ctx.body = createErrorResponse('invalid_request', 'Missing credentials')
+      return
+    }
+
+    const { storeManager } = await import('../../../store/store')
+    const { validateCredentials } = await import('../../../store/validator')
+    
+    const provider = storeManager.getProviderById(body.providerId)
+    if (!provider) {
+      // Provider might not be created yet for builtin; look up from builtin config
+      const { getBuiltinProvider } = await import('../../../providers/builtin')
+      const builtinConfig = getBuiltinProvider(body.providerId)
+      if (!builtinConfig) {
+        ctx.status = 404
+        ctx.body = createErrorResponse('provider_not_found', `Provider not found: ${body.providerId}`)
+        return
+      }
+      // Build a minimal provider object for validation
+      const tempProvider = {
+        id: builtinConfig.id,
+        name: builtinConfig.name,
+        type: 'builtin' as const,
+        authType: builtinConfig.authType,
+        apiEndpoint: builtinConfig.apiEndpoint,
+        chatPath: builtinConfig.chatPath,
+        headers: builtinConfig.headers || {},
+        enabled: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        supportedModels: builtinConfig.supportedModels,
+      }
+      const result = await validateCredentials(tempProvider as any, body.credentials)
+      ctx.set('Content-Type', 'application/json')
+      ctx.body = createSuccessResponse(result)
+      return
+    }
+
+    const result = await validateCredentials(provider, body.credentials)
+    ctx.set('Content-Type', 'application/json')
+    ctx.body = createSuccessResponse(result)
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to validate token'
+    ctx.status = 500
+    ctx.body = createErrorResponse('internal_error', errorMessage)
+  }
+})
+
+/**
  * POST /v0/management/accounts/:id/validate
  * Validate account credentials
  */
