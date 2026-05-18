@@ -2,8 +2,8 @@
 export default {
   darkMode: ["class", '[data-theme="dark"]'],
   content: [
-    "./src/renderer/index.html",
-    "./src/renderer/src/**/*.{js,ts,jsx,tsx}",
+    "./frontend/index.html",
+    "./frontend/src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     container: {
