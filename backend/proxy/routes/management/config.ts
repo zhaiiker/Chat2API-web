@@ -49,13 +49,8 @@ function maskSensitiveObject(obj: Record<string, unknown>): Record<string, unkno
   const masked: Record<string, unknown> = {}
 
   for (const [key, value] of Object.entries(obj)) {
-    if (key === 'key' || key === 'managementApiSecret' || key === 'credentials') {
+    if (key === 'managementApiSecret' || key === 'credentials' || key === 'passwordHash' || key === 'passwordSalt') {
       masked[key] = '***'
-    } else if (key === 'apiKeys' && Array.isArray(value)) {
-      masked[key] = value.map(apiKey => ({
-        ...apiKey,
-        key: '***',
-      }))
     } else if (typeof value === 'object' && value !== null) {
       masked[key] = maskSensitiveValue(value, key)
     } else {
@@ -77,12 +72,9 @@ function maskConfig(config: AppConfig): Record<string, unknown> {
     masked.managementApi = managementApi
   }
 
-  if (Array.isArray(masked.apiKeys)) {
-    masked.apiKeys = masked.apiKeys.map(apiKey => ({
-      ...(apiKey as Record<string, unknown>),
-      key: '***',
-    }))
-  }
+  // API keys are intentionally NOT masked here — operators need to see
+  // and copy them to configure AI clients. Only the management secret
+  // and password hashes are sensitive.
 
   return masked
 }
