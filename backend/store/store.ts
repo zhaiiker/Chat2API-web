@@ -58,7 +58,7 @@ type StoreType = JsonStore<StoreSchema>
  * Storage Manager Class
  * Responsible for data persistence and encryption
  */
-class StoreManager {
+export class StoreManager {
   private store: StoreType | null = null
   private isInitialized: boolean = false
   private initializationError: Error | null = null

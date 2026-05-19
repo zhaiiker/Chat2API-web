@@ -209,6 +209,32 @@ export interface RequestLogConfig {
   redactSensitiveData: boolean
 }
 
+export interface RequestLogEntry {
+  id: string
+  timestamp: number
+  status: 'success' | 'error'
+  statusCode: number
+  method: string
+  url: string
+  model: string
+  actualModel?: string
+  providerId?: string
+  providerName?: string
+  accountId?: string
+  accountName?: string
+  requestBody?: string
+  userInput?: string
+  webSearch?: boolean
+  reasoningEffort?: 'low' | 'medium' | 'high'
+  responseStatus: number
+  responsePreview?: string
+  responseBody?: string
+  latency: number
+  isStream: boolean
+  errorMessage?: string
+  errorStack?: string
+}
+
 export interface ManagementApiConfig {
   enableManagementApi: boolean
   managementApiSecret: string

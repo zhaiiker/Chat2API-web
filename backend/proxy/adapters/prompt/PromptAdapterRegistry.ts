@@ -194,7 +194,9 @@ export class PromptAdapterRegistry {
             if (typeof part === 'string') {
               parts.push(part)
             } else if (part && typeof part === 'object' && 'text' in part) {
-              parts.push(part.text)
+              if (typeof part.text === 'string') {
+                parts.push(part.text)
+              }
             }
           }
         }

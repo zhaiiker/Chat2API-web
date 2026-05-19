@@ -876,6 +876,29 @@
       "tokenInvalid": "Server rejected the token",
       "manualFallback": "Manual paste (DevTools)",
       "manualFallbackAdvanced": "Manual paste from DevTools (advanced)"
+    },
+    "console": {
+      "description": "One-click script to automatically extract and send the {{provider}} token — just paste it in the browser console.",
+      "generate": "Generate Script",
+      "generating": "Generating…",
+      "stepsTitle": "How to use:",
+      "step1": "Open {{provider}} in a new tab and make sure you are logged in.",
+      "step2": "Press F12 to open DevTools, switch to the Console tab.",
+      "step3": "Click \"Copy Command\" below, then paste (Ctrl+V) in the Console and press Enter.",
+      "step4": "Right-click the returned value → \"Copy string\" → paste it into the token field above.",
+      "copyCommand": "Copy Command to Clipboard",
+      "commandLabel": "Console command:",
+      "copied": "Command Copied!",
+      "openLogin": "Open {{host}} login page",
+      "waiting": "Waiting for token…",
+      "timeLeft": "time left",
+      "success": "Token received and validated. Saving account…",
+      "expired": "Script expired. Click \"Generate Script\" to get a new one.",
+      "ticketUsed": "Script has already been used or expired.",
+      "tryAgain": "Try Again (new script)",
+      "networkError": "Network error while generating script",
+      "tokenInvalid": "Server rejected the token",
+      "manualFallback": "Or paste token manually (advanced)"
     }
   },
   "models": {

@@ -269,8 +269,9 @@ export function removeToolPromptSection(content: string, clientType: ClientType)
 export function cleanToolPrompts(messages: ChatMessage[]): ChatMessage[] {
   const allContent = extractAllContent(messages)
   const clientResult = detectClientFromContent(allContent)
+  const config = CLIENT_SIGNATURES[clientResult.clientType]
 
-  if (!clientResult.promptSectionMarkers) {
+  if (!config?.promptSectionMarkers) {
     return messages
   }
 

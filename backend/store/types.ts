@@ -154,6 +154,8 @@ export interface Provider {
   status?: ProviderStatus
   /** Last status check time */
   lastStatusCheck?: number
+  /** Credential field configuration (optional, mainly used by built-in providers) */
+  credentialFields?: CredentialField[]
 }
 
 /**

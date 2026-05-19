@@ -3,7 +3,7 @@
  * Defines types and interfaces for provider authentication
  */
 
-import type { ProviderVendor } from '../../shared/types'
+import type { ProviderVendor } from '../shared/types'
 
 export type ProviderType = Exclude<ProviderVendor, 'custom'>
 
@@ -22,7 +22,7 @@ export type OAuthStatus = 'idle' | 'pending' | 'success' | 'error' | 'cancelled'
 /**
  * Token type
  */
-export type TokenType = 'jwt' | 'refresh' | 'access' | 'cookie'
+export type TokenType = 'jwt' | 'refresh' | 'access' | 'cookie' | 'token'
 
 /**
  * OAuth login result
@@ -129,7 +129,7 @@ export interface ManualTokenConfig {
 /**
  * Manual input config for each provider
  */
-export const MANUAL_TOKEN_CONFIGS: Record<ProviderType, ManualTokenConfig[]> = {
+export const MANUAL_TOKEN_CONFIGS: Partial<Record<ProviderType, ManualTokenConfig[]>> = {
   deepseek: [
     {
       providerType: 'deepseek',

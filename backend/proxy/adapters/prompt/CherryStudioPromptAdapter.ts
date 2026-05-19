@@ -176,7 +176,7 @@ export class CherryStudioPromptAdapter extends BasePromptAdapter {
       return { messages, tools: undefined, injected: false }
     }
 
-    const variant = this.getPromptVariant(model)
+    const variant = this.getPromptVariant(model) ?? undefined
     const toolsPrompt = this.toolsToPrompt(tools, variant)
     const transformedMessages = this.injectPrompt(messages, toolsPrompt)
 

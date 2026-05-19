@@ -118,7 +118,7 @@ export abstract class BasePromptAdapter implements PromptAdapter {
       return { messages, tools: undefined, injected: false }
     }
 
-    const variant = this.getPromptVariant(model, provider)
+    const variant = this.getPromptVariant(model, provider) ?? undefined
     const toolsPrompt = this.toolsToPrompt(tools, variant)
     
     const transformedMessages = this.injectPrompt(messages, toolsPrompt)
@@ -166,7 +166,9 @@ export abstract class BasePromptAdapter implements PromptAdapter {
             if (typeof part === 'string') {
               parts.push(part)
             } else if (part && typeof part === 'object' && 'text' in part) {
-              parts.push(part.text)
+              if (typeof part.text === 'string') {
+                parts.push(part.text)
+              }
             }
           }
         }

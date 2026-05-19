@@ -77,13 +77,10 @@ export function createAccount(
   return {
     providerId,
     credentials,
-    name: accountInfo?.name,
+    name: accountInfo?.name || '',
     email: accountInfo?.email,
-    userId: accountInfo?.userId,
     status: 'active',
     lastUsed: undefined,
-    usageCount: 0,
-    metadata: {},
   }
 }
 

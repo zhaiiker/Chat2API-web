@@ -39,77 +39,88 @@ import type { Provider, CredentialField, Account, BuiltinProviderConfig } from '
 function mapOAuthCredentials(providerId: string | undefined, credentials: Record<string, string>): Record<string, string> {
   if (!providerId) return credentials
 
-  const credentialKeyMap: Record<string, string> = {
-    'glm': 'chatglm_refresh_token',
-    'deepseek': 'userToken',
-    'qwen': 'tongyi_sso_ticket',
-    'qwen-ai': 'tongyi_sso_ticket',
-    'zai': 'tongyi_sso_ticket',
-    'perplexity': '__Secure-next-auth.session-token',
-    'mimo': 'serviceToken',
+  // For each provider, list every OAuth key that may carry the primary
+  // token (raw cookie names, the bookmarklet's relabelled "token" field,
+  // older snake_case names, and the camelCase keys the backend adapters
+  // emit today). The first key that has a non-empty value wins.
+  const primaryTokenCandidates: Record<string, string[]> = {
+    glm: ['refreshToken', 'refresh_token', 'chatglm_refresh_token', 'token'],
+    deepseek: ['userToken', 'token'],
+    qwen: ['tongyi_sso_ticket', 'ticket', 'token'],
+    'qwen-ai': ['tongyi_sso_ticket', 'ticket', 'token'],
+    zai: ['tongyi_sso_ticket', 'ticket', 'token'],
+    perplexity: ['__Secure-next-auth.session-token', 'next-auth.session-token', 'sessionToken', 'token'],
+    kimi: ['kimi-auth', 'token'],
+    minimax: ['_token', 'token'],
+    mimo: ['service_token', 'serviceToken', 'token'],
   }
 
-  const providerFieldNames: Record<string, string> = {
-    'glm': 'refresh_token',
-    'deepseek': 'token',
-    'qwen': 'ticket',
+  const formFieldName: Record<string, string> = {
+    glm: 'refresh_token',
+    deepseek: 'token',
+    qwen: 'ticket',
     'qwen-ai': 'ticket',
-    'zai': 'ticket',
-    'perplexity': 'sessionToken',
-    'mimo': 'service_token',
+    zai: 'ticket',
+    perplexity: 'sessionToken',
+    kimi: 'token',
+    minimax: 'token',
+    mimo: 'service_token',
   }
 
-  const oauthKey = credentialKeyMap[providerId]
-  if (oauthKey && credentials[oauthKey]) {
-    const fieldName = providerFieldNames[providerId]
-    if (fieldName) {
-      // Handle JSON-wrapped tokens (DeepSeek stores token as {"value":"..."})
-      let tokenValue = credentials[oauthKey]
-      if (providerId === 'deepseek' && tokenValue && tokenValue.startsWith('{') && tokenValue.endsWith('}')) {
-        try {
-          const parsed = JSON.parse(tokenValue)
-          if (parsed.value) {
-            tokenValue = parsed.value
-          }
-        } catch (e) {
-          console.error('[AddAccountDialog] Error parsing JSON token:', e)
+  const pickFirst = (keys: string[]): string | undefined => {
+    for (const k of keys) {
+      const v = credentials[k]
+      if (typeof v === 'string' && v.length > 0) return v
+    }
+    return undefined
+  }
+
+  const fieldName = formFieldName[providerId]
+  const tokenCandidates = primaryTokenCandidates[providerId]
+
+  if (fieldName && tokenCandidates) {
+    let tokenValue = pickFirst(tokenCandidates)
+
+    // DeepSeek's bookmarklet captures the raw localStorage payload, which
+    // is itself a JSON-wrapped string: {"value":"<actual token>"}.
+    if (providerId === 'deepseek' && tokenValue && tokenValue.startsWith('{') && tokenValue.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(tokenValue)
+        if (typeof parsed?.value === 'string') {
+          tokenValue = parsed.value
         }
+      } catch (e) {
+        console.error('[AddAccountDialog] Error parsing JSON token:', e)
       }
+    }
+
+    if (tokenValue) {
+      // MiniMax also requires realUserID, kept alongside the primary token.
+      if (providerId === 'minimax') {
+        const realUserID = credentials._userId || credentials.realUserID
+        const result: Record<string, string> = { [fieldName]: tokenValue }
+        if (realUserID) result.realUserID = realUserID
+        return result
+      }
+
+      // Mimo Studio needs three fields together; the helper below populates
+      // all of them and falls back to the (already mapped) primary token.
+      if (providerId === 'mimo') {
+        const result: Record<string, string> = {}
+        const userId = credentials.user_id || credentials.userId || credentials.mimoUserId
+        const phToken = credentials.ph_token || credentials.xiaomichatbot_ph || credentials.mimoPhToken
+        result.service_token = tokenValue
+        if (userId) result.user_id = userId
+        if (phToken) result.ph_token = phToken
+        return result
+      }
+
       return { [fieldName]: tokenValue }
     }
   }
 
-  // For Perplexity, if we have the secure token, map it
-  if (providerId === 'perplexity' && credentials['__Secure-next-auth.session-token']) {
-    return { sessionToken: credentials['__Secure-next-auth.session-token'] }
-  }
-  if (providerId === 'perplexity' && credentials['next-auth.session-token']) {
-    return { sessionToken: credentials['next-auth.session-token'] }
-  }
-
-  // For Mimo, map all three tokens
-  if (providerId === 'mimo') {
-    const result: Record<string, string> = {}
-    // OAuth already returns credentials in correct format (service_token, user_id, ph_token)
-    // Check for final format first
-    if (credentials['service_token']) {
-      result['service_token'] = credentials['service_token']
-    } else if (credentials['serviceToken']) {
-      result['service_token'] = credentials['serviceToken']
-    }
-    if (credentials['user_id']) {
-      result['user_id'] = credentials['user_id']
-    } else if (credentials['userId']) {
-      result['user_id'] = credentials['userId']
-    }
-    if (credentials['ph_token']) {
-      result['ph_token'] = credentials['ph_token']
-    } else if (credentials['xiaomichatbot_ph']) {
-      result['ph_token'] = credentials['xiaomichatbot_ph']
-    }
-    return result
-  }
-
+  // Unknown provider, or none of the candidate keys matched. Pass the
+  // raw credentials through so the user at least sees what arrived.
   return credentials
 }
 
@@ -353,11 +364,19 @@ export function AddAccountDialog({
                         // Map raw OAuth credentials to the provider's credential
                         // field names, then pre-fill the form so the user can
                         // review (and adjust the account name) before saving.
+                        console.log('[AddAccountDialog] OAuth raw creds:', JSON.stringify(creds))
                         const mapped = mapOAuthCredentials(provider.id, creds)
-                        setCredentials(mapped)
-                        if (accountInfo?.name) setName(accountInfo.name)
-                        setValidationResult({ valid: true, userInfo: accountInfo })
+                        console.log('[AddAccountDialog] Mapped creds:', JSON.stringify(mapped))
+                        // Switch tab FIRST so the credential fields are mounted,
+                        // then set credentials so React renders them filled.
                         setActiveTab('manual')
+                        // Use a microtask to ensure the tab content has mounted
+                        // before we update the credential state that fills the inputs.
+                        setTimeout(() => {
+                          setCredentials(mapped)
+                          if (accountInfo?.name) setName(accountInfo.name)
+                          setValidationResult({ valid: true, userInfo: accountInfo })
+                        }, 0)
                       }}
                     />
                   )}

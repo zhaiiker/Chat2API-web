@@ -9,7 +9,8 @@ import { ChatMessage, ChatCompletionTool, ToolCall } from '../../types'
 import { BasePromptAdapter, PromptVariant, TransformResult, ParseResult, ToolCallFormat } from './BasePromptAdapter'
 import { ClientType } from '../../utils/promptSignatures'
 import { parseToolCallsFromText } from '../../utils/toolParser'
-import { TOOL_PROMPT_SIGNATURES, hasGeneralToolPromptSignature } from '../../constants/signatures'
+import { TOOL_PROMPT_SIGNATURES } from '../../utils/tools'
+import { hasGeneralToolPromptSignature } from '../../constants/signatures'
 import { DEFAULT_VARIANT, XML_VARIANT } from '../../prompt/variants'
 
 /**

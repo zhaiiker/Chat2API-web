@@ -28,7 +28,10 @@ import {
   Loader2,
 } from 'lucide-react'
 import { ApiService } from '@/services/api'
-import { BookmarkletPanel } from './BookmarkletPanel'
+import { ConsoleScriptPanel } from './ConsoleScriptPanel'
+
+// NOTE: BookmarkletPanel is no longer used in the UI.
+// The ConsoleScriptPanel now just shows a simple one-liner command.
 
 type StorageType = 'localStorage' | 'cookie' | 'network'
 
@@ -308,13 +311,11 @@ export function TokenExtractionGuide({
 
   return (
     <div className="space-y-4">
-      {/* ── Recommended: Bookmarklet ── */}
-      <BookmarkletPanel
+      {/* ── Recommended: Simple Console command ── */}
+      <ConsoleScriptPanel
         providerId={providerId}
         providerType={providerType}
         providerName={providerName}
-        loginUrl={guide.loginUrl}
-        onSuccess={onSuccess}
       />
 
       {/* ── Fallback: Manual DevTools paste (collapsed by default) ── */}
@@ -328,7 +329,7 @@ export function TokenExtractionGuide({
         ) : (
           <ChevronRight className="h-3.5 w-3.5" />
         )}
-        {t('oauth.bookmarklet.manualFallbackAdvanced')}
+        {t('oauth.console.manualFallback')}
       </button>
 
       {showManual && (

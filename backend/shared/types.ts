@@ -30,10 +30,15 @@ export type LoadBalanceStrategy = 'round-robin' | 'fill-first' | 'failover'
 
 export type Theme = 'light' | 'dark' | 'system'
 
-export type {
+import type {
   LegacyToolPromptConfig,
   ToolCallingConfig,
 } from './toolCalling'
+
+export type {
+  LegacyToolPromptConfig,
+  ToolCallingConfig,
+}
 
 export interface Account {
   id: string
@@ -68,6 +73,7 @@ export interface Provider {
   modelMappings?: Record<string, string>
   status?: ProviderStatus
   lastStatusCheck?: number
+  credentialFields?: CredentialField[]
 }
 
 export interface ModelMapping {

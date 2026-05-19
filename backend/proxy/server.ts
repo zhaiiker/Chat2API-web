@@ -80,7 +80,21 @@ export class ProxyServer {
     this.app.use(async (ctx, next) => {
       const origin = ctx.get('Origin')
 
-      if (ctx.path.startsWith('/v0/management')) {
+      // The bookmarklet ingest endpoint is intentionally cross-origin:
+      // operators run the bookmarklet from the provider's own page
+      // (e.g. https://chatglm.cn) and POST the captured token back to
+      // this server. The endpoint authenticates with a one-shot ticket
+      // baked into the bookmarklet, so it does not (and must not) accept
+      // cookies. We therefore allow any origin unconditionally — anything
+      // narrower would force every operator to whitelist every provider
+      // domain in CHAT2API_CORS_ORIGINS, which defeats the whole point.
+      const isBookmarkletIngest =
+        ctx.path === '/v0/management/oauth/bookmarklet/ingest'
+
+      if (isBookmarkletIngest) {
+        ctx.set('Access-Control-Allow-Origin', '*')
+        ctx.set('Vary', 'Origin')
+      } else if (ctx.path.startsWith('/v0/management')) {
         // Management API: only allow explicitly configured origins.
         // CHAT2API_CORS_ORIGINS accepts a comma-separated list (e.g. "https://admin.example.com,http://localhost:3000").
         // If unset, only same-origin requests (no Origin header) are permitted.
@@ -134,6 +148,19 @@ export class ProxyServer {
 
       // Skip management API paths - they have their own authentication
       if (ctx.path.startsWith('/v0/management')) {
+        await next()
+        return
+      }
+
+      // The API key gate is only meant to protect the OpenAI-compatible
+      // proxy endpoints. Don't gate the SPA's own assets / client-side
+      // routes, otherwise turning on "Enable API Key" makes the web UI
+      // itself unreachable (browser fetches /assets/*.js -> 401 -> blank
+      // page). Anything that isn't an explicit API path is allowed
+      // through; the static fallback (or 404) will handle it.
+      const isProxyApi =
+        ctx.path.startsWith('/v1/') || ctx.path === '/v1'
+      if (!isProxyApi) {
         await next()
         return
       }
@@ -225,10 +252,15 @@ export class ProxyServer {
       this.router.use(route.allowedMethods())
     }
 
-    this.router.get('/', async (ctx) => {
-      // When the SPA is mounted, let the static fallback render index.html.
+    this.router.get('/', async (ctx, next) => {
+      // When the SPA is mounted, hand off to the static fallback so it
+      // can serve index.html (and let client-side routing take over).
+      // We MUST call next(): koa-router will not run any later middleware
+      // if the handler returns without invoking it, so the previous
+      // `ctx.status = 404; return` short-circuited the SPA fallback and
+      // browsers got a bare 404 at the site root.
       if (this.staticFrontendDir) {
-        ctx.status = 404
+        await next()
         return
       }
       ctx.body = {
