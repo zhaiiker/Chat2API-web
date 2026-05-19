@@ -30,6 +30,9 @@ import {
 import { ApiService } from '@/services/api'
 import { ConsoleScriptPanel } from './ConsoleScriptPanel'
 
+// NOTE: BookmarkletPanel is no longer used in the UI.
+// The ConsoleScriptPanel now just shows a simple one-liner command.
+
 type StorageType = 'localStorage' | 'cookie' | 'network'
 
 interface ProviderGuide {
@@ -308,13 +311,11 @@ export function TokenExtractionGuide({
 
   return (
     <div className="space-y-4">
-      {/* ── Recommended: Console Script (one-click copy-paste) ── */}
+      {/* ── Recommended: Simple Console command ── */}
       <ConsoleScriptPanel
         providerId={providerId}
         providerType={providerType}
         providerName={providerName}
-        loginUrl={guide.loginUrl}
-        onSuccess={onSuccess}
       />
 
       {/* ── Fallback: Manual DevTools paste (collapsed by default) ── */}
