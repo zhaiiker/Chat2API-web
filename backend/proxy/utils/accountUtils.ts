@@ -79,11 +79,8 @@ export function createAccount(
     credentials,
     name: accountInfo?.name || '',
     email: accountInfo?.email,
-    userId: accountInfo?.userId,
     status: 'active',
     lastUsed: undefined,
-    usageCount: 0,
-    metadata: {},
   }
 }
 
