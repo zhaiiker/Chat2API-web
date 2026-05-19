@@ -138,6 +138,19 @@ export class ProxyServer {
         return
       }
 
+      // The API key gate is only meant to protect the OpenAI-compatible
+      // proxy endpoints. Don't gate the SPA's own assets / client-side
+      // routes, otherwise turning on "Enable API Key" makes the web UI
+      // itself unreachable (browser fetches /assets/*.js -> 401 -> blank
+      // page). Anything that isn't an explicit API path is allowed
+      // through; the static fallback (or 404) will handle it.
+      const isProxyApi =
+        ctx.path.startsWith('/v1/') || ctx.path === '/v1'
+      if (!isProxyApi) {
+        await next()
+        return
+      }
+
       const config = storeManager.getConfig()
       
       if (config.enableApiKey && config.apiKeys && config.apiKeys.length > 0) {
