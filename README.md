@@ -76,6 +76,10 @@ npm run build
 
 # Start (default port 8080)
 PORT=8080 node dist/backend/index.js
+
+# Start (Windows PowerShell)
+$env:PORT="8080"; $env:HOST="0.0.0.0"; node dist/backend/index.js
+
 ```
 
 Open `http://your-server:8080` in a browser. On first visit you'll set an administrator password.
