@@ -133,7 +133,7 @@ export function RequestLogList() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[220px] flex-1">
+        <div className="relative min-w-[160px] sm:min-w-[220px] flex-1">
           <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
@@ -180,8 +180,8 @@ export function RequestLogList() {
               <TableHead className="w-[170px]">{t('logs.time')}</TableHead>
               <TableHead className="w-[100px]">{t('logs.status')}</TableHead>
               <TableHead>{t('logs.model')}</TableHead>
-              <TableHead>{t('logs.provider')}</TableHead>
-              <TableHead>{t('logs.account')}</TableHead>
+              <TableHead className="hidden sm:table-cell">{t('logs.provider')}</TableHead>
+              <TableHead className="hidden md:table-cell">{t('logs.account')}</TableHead>
               <TableHead className="w-[100px] text-right">{t('logs.latency')}</TableHead>
             </TableRow>
           </TableHeader>
@@ -220,8 +220,8 @@ export function RequestLogList() {
                       </span>
                     ) : null}
                   </TableCell>
-                  <TableCell className="text-sm">{log.providerName || '-'}</TableCell>
-                  <TableCell className="text-sm">{log.accountName || '-'}</TableCell>
+                  <TableCell className="hidden sm:table-cell text-sm">{log.providerName || '-'}</TableCell>
+                  <TableCell className="hidden md:table-cell text-sm">{log.accountName || '-'}</TableCell>
                   <TableCell className="text-right text-sm">
                     {formatLatency(log.latency)}
                   </TableCell>

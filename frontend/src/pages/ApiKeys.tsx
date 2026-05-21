@@ -189,7 +189,7 @@ export default function ApiKeysPage() {
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <CardTitle className="flex items-center gap-2">
               <Key className="h-5 w-5" />
@@ -199,7 +199,7 @@ export default function ApiKeysPage() {
               {t('apiKeys.totalKeys', { count: apiKeys.length })}, {t('apiKeys.enabledKeys', { count: apiKeys.filter(k => k.enabled).length })}
             </CardDescription>
           </div>
-          <Button onClick={() => setShowAddDialog(true)}>
+          <Button onClick={() => setShowAddDialog(true)} className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             {t('apiKeys.newApiKey')}
           </Button>
@@ -220,8 +220,8 @@ export default function ApiKeysPage() {
                   <TableHead>{t('apiKeys.name')}</TableHead>
                   <TableHead>{t('apiKeys.apiKey')}</TableHead>
                   <TableHead>{t('apiKeys.status')}</TableHead>
-                  <TableHead>{t('apiKeys.usageCount')}</TableHead>
-                  <TableHead>{t('apiKeys.createdAt')}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t('apiKeys.usageCount')}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t('apiKeys.createdAt')}</TableHead>
                   <TableHead>{t('apiKeys.operations')}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -232,8 +232,8 @@ export default function ApiKeysPage() {
                       <div className="font-medium">{apiKey.name}</div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <code className="text-sm bg-muted px-2 py-1 rounded">
+                      <div className="flex items-center gap-1 sm:gap-2">
+                        <code className="text-xs sm:text-sm bg-muted px-1 sm:px-2 py-1 rounded max-w-[100px] sm:max-w-none truncate">
                           {visibleKeys.has(apiKey.id) 
                             ? apiKey.key 
                             : maskKey(apiKey.key)}
@@ -241,22 +241,22 @@ export default function ApiKeysPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-7 w-7 sm:h-8 sm:w-8"
                           onClick={() => handleToggleVisibility(apiKey.id)}
                         >
                           {visibleKeys.has(apiKey.id) ? (
-                            <EyeOff className="h-4 w-4" />
+                            <EyeOff className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                           ) : (
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                           )}
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-7 w-7 sm:h-8 sm:w-8"
                           onClick={() => handleCopyKey(apiKey.key)}
                         >
-                          <Copy className="h-4 w-4" />
+                          <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -268,13 +268,13 @@ export default function ApiKeysPage() {
                         }
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <div className="flex items-center gap-1">
                         <BarChart3 className="h-4 w-4 text-muted-foreground" />
                         {apiKey.usageCount}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Clock className="h-4 w-4" />
                         {formatDate(apiKey.createdAt)}
@@ -284,10 +284,10 @@ export default function ApiKeysPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        className="h-7 w-7 sm:h-8 sm:w-8 text-destructive hover:text-destructive"
                         onClick={() => setDeleteKeyId(apiKey.id)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </Button>
                     </TableCell>
                   </TableRow>

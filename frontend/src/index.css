@@ -1019,3 +1019,65 @@ body {
 [data-theme="dark"] [data-state="active"].tab-trigger {
   background: var(--bg-tertiary);
 }
+
+
+
+/* ===== Mobile Responsiveness ===== */
+
+/* Mobile sidebar adjustments */
+@media (max-width: 767px) {
+  .glass-sidebar {
+    margin: 0;
+    border-radius: 0;
+  }
+
+  /* Reduce table padding on mobile */
+  table th,
+  table td {
+    padding: 8px 8px;
+    font-size: 13px;
+  }
+
+  /* Stack form elements on mobile */
+  .glass-card {
+    border-radius: 12px;
+  }
+
+  /* Reduce bokeh effects on mobile for performance */
+  .bokeh-bg::before,
+  .bokeh-bg::after {
+    width: 250px;
+    height: 250px;
+    filter: blur(60px);
+  }
+
+  .bokeh-blob-1 {
+    width: 200px;
+    height: 200px;
+  }
+
+  .bokeh-blob-2 {
+    width: 150px;
+    height: 150px;
+  }
+
+  /* Tooltip not needed on mobile (touch) */
+  .tooltip-content {
+    display: none !important;
+  }
+}
+
+/* Responsive table container - horizontal scroll on mobile */
+.responsive-table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767px) {
+  .responsive-table-container {
+    margin: 0 -0.75rem;
+    padding: 0 0.75rem;
+    width: calc(100% + 1.5rem);
+  }
+}

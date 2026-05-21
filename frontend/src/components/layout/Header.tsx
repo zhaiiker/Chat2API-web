@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Sun, Moon, Languages, Play, Pause } from 'lucide-react'
+import { Sun, Moon, Languages, Play, Pause, Menu } from 'lucide-react'
 import { useTheme } from '@/hooks/useTheme'
 import { cn } from '@/lib/utils'
 import logoIcon from '@/assets/icons/icons.png'
@@ -9,7 +9,7 @@ import { useSettingsStore } from '@/stores/settingsStore'
 export function Header() {
   const { t } = useTranslation()
   const { toggleTheme, isDark } = useTheme()
-  const { language, setLanguage } = useSettingsStore()
+  const { language, setLanguage, toggleMobileSidebar } = useSettingsStore()
   const [proxyEnabled, setProxyEnabled] = useState(false)
   const [proxyLoading, setProxyLoading] = useState(false)
   const [port, setPort] = useState(8080)
@@ -51,8 +51,17 @@ export function Header() {
   }
 
   return (
-    <header className="glass-topbar flex items-center justify-between px-4 drag-region h-12">
-      <div className="flex items-center gap-3 no-drag">
+    <header className="glass-topbar flex items-center justify-between px-3 sm:px-4 drag-region h-12">
+      <div className="flex items-center gap-2 sm:gap-3 no-drag">
+        {/* Mobile hamburger menu */}
+        <button
+          onClick={toggleMobileSidebar}
+          className="w-8 h-8 flex md:hidden items-center justify-center rounded-lg transition-all duration-300 group"
+          aria-label="Toggle menu"
+        >
+          <Menu className="h-5 w-5 text-[var(--text-primary)] group-hover:text-[var(--accent-primary)]" />
+        </button>
+
         <div className="sidebar-logo-icon">
           <img 
             src={logoIcon} 
@@ -67,7 +76,7 @@ export function Header() {
         </div>
       </div>
 
-      <div className="flex items-center gap-4 no-drag">
+      <div className="flex items-center gap-2 sm:gap-4 no-drag">
         <button
           onClick={toggleTheme}
           className="w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-300 group"
@@ -91,7 +100,7 @@ export function Header() {
         <div className="flex items-center">
           <div
             className={cn(
-              "flex items-center gap-1.5 pl-2.5 pr-1 py-1 rounded-full transition-all duration-300",
+              "flex items-center gap-1 sm:gap-1.5 pl-2 sm:pl-2.5 pr-1 py-1 rounded-full transition-all duration-300",
               "border",
               proxyEnabled
                 ? "proxy-toggle-active"
@@ -110,13 +119,23 @@ export function Header() {
             />
             <span
               className={cn(
-                "text-xs font-medium transition-colors duration-300",
+                "text-xs font-medium transition-colors duration-300 hidden sm:inline",
                 proxyEnabled
                   ? "text-[var(--accent-primary)]"
                   : "text-[var(--text-muted)]"
               )}
             >
               127.0.0.1:{port}
+            </span>
+            <span
+              className={cn(
+                "text-xs font-medium transition-colors duration-300 sm:hidden",
+                proxyEnabled
+                  ? "text-[var(--accent-primary)]"
+                  : "text-[var(--text-muted)]"
+              )}
+            >
+              :{port}
             </span>
             <button
               onClick={handleToggleProxy}

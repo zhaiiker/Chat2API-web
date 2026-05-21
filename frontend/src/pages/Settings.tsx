@@ -35,7 +35,7 @@ export function Settings() {
       </div>
 
       <Tabs defaultValue="appearance" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 h-auto">
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 h-auto">
           <TabsTrigger value="appearance" className="flex items-center gap-2 py-2">
             <Sun className="h-4 w-4" />
             <span className="hidden sm:inline">{t('settings.appearance')}</span>
