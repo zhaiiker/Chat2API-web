@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
+import { MobileSidebar } from './MobileSidebar'
 
 export function MainLayout() {
   return (
@@ -11,8 +12,13 @@ export function MainLayout() {
       </div>
       <Header />
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        <main className="flex-1 overflow-auto p-6">
+        {/* Desktop sidebar - hidden on mobile */}
+        <div className="hidden md:block">
+          <Sidebar />
+        </div>
+        {/* Mobile sidebar overlay */}
+        <MobileSidebar />
+        <main className="flex-1 overflow-auto p-3 sm:p-4 md:p-6">
           <Outlet />
         </main>
       </div>

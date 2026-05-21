@@ -16,7 +16,8 @@
     "logs": "Logs",
     "session": "Session",
     "settings": "Settings",
-    "about": "About"
+    "about": "About",
+    "menu": "Menu"
   },
   "dashboard": {
     "title": "Dashboard",

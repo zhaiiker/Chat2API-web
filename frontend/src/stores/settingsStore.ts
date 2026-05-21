@@ -16,6 +16,9 @@ interface SettingsState {
   sidebarCollapsed: boolean
   toggleSidebar: () => void
   setSidebarCollapsed: (collapsed: boolean) => void
+  mobileSidebarOpen: boolean
+  setMobileSidebarOpen: (open: boolean) => void
+  toggleMobileSidebar: () => void
   proxyEnabled: boolean
   setProxyEnabled: (enabled: boolean) => void
   oauthProxyMode: OAuthProxyMode
@@ -56,6 +59,9 @@ export const useSettingsStore = create<SettingsState>()(
       sidebarCollapsed: false,
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+      mobileSidebarOpen: false,
+      setMobileSidebarOpen: (open) => set({ mobileSidebarOpen: open }),
+      toggleMobileSidebar: () => set((state) => ({ mobileSidebarOpen: !state.mobileSidebarOpen })),
       proxyEnabled: false,
       setProxyEnabled: (enabled) => set({ proxyEnabled: enabled }),
       oauthProxyMode: 'system',
@@ -153,6 +159,11 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: 'chat2api-settings',
+      partialize: (state) => {
+        // Exclude mobileSidebarOpen and config from persistence
+        const { mobileSidebarOpen, config, ...rest } = state
+        return rest
+      },
       onRehydrateStorage: () => (state) => {
         if (state?.language) {
           i18n.changeLanguage(state.language)
