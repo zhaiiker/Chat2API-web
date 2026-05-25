@@ -61,7 +61,7 @@
 
 ### Option 1: Direct Deployment (Recommended)
 
-**Requirements:** Node.js 18+, npm, Git
+**Requirements:** Node.js 20+, npm, Git
 
 ```bash
 # Clone
