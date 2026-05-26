@@ -9,6 +9,11 @@ import { ToolStreamParser } from '../toolCalling/ToolStreamParser.ts'
 import type { ToolCallingPlan } from '../toolCalling/types.ts'
 
 const MODEL_NAME = 'deepseek-chat'
+const SEARCH_CONTROL_MARKER_PATTERN = /^(SEARCH|WEB_SEARCH|SEARCHING)(?:\s+|$)/i
+
+function stripSearchControlMarker(content: string, enabled: boolean): string {
+  return enabled ? content.replace(SEARCH_CONTROL_MARKER_PATTERN, '') : content
+}
 
 interface StreamChunk {
   p?: string
@@ -87,6 +92,10 @@ export class DeepSeekStreamHandler {
 
   private isSearchSilentModel(): boolean {
     return this.semanticModel.includes('search-silent')
+  }
+
+  private shouldStripSearchControlMarker(): boolean {
+    return this.webSearchEnabled || this.semanticModel.includes('search')
   }
 
   private static normalizeSearchResult(result: any): any | null {
@@ -339,8 +348,7 @@ export class DeepSeekStreamHandler {
     isSearchSilentModel: boolean
   ): void {
     const cleanedValue = content.replace(/FINISHED/g, '')
-    // Always filter SEARCH keywords for thinking content
-    const filteredForSearch = cleanedValue.replace(/^(SEARCH|WEB_SEARCH|SEARCHING)\s*/i, '')
+    const filteredForSearch = stripSearchControlMarker(cleanedValue, this.shouldStripSearchControlMarker())
     const processedContent = isSearchSilentModel
       ? filteredForSearch.replace(/\[citation:(\d+)\]/g, '')
       : filteredForSearch.replace(/\[citation:(\d+)\]/g, '[$1]')
@@ -452,6 +460,7 @@ export class DeepSeekStreamHandler {
     const isThinkingModel = this.isThinkingModel()
     const isFoldModel = this.isFoldModel(isThinkingModel)
     const isSearchSilentModel = this.isSearchSilentModel()
+    const shouldStripSearchControlMarker = this.shouldStripSearchControlMarker()
 
     return new Promise((resolve, reject) => {
       let buffer = ''
@@ -490,7 +499,7 @@ export class DeepSeekStreamHandler {
 
                   if (fragment.content) {
                     let cleanedFragment = fragment.content.replace(/FINISHED/g, '')
-                    cleanedFragment = cleanedFragment.replace(/^(SEARCH|WEB_SEARCH|SEARCHING)\s*/i, '')
+                    cleanedFragment = stripSearchControlMarker(cleanedFragment, shouldStripSearchControlMarker)
                     if (fragment.type === 'THINK') {
                       accumulatedThinkingContent += cleanedFragment
                     } else if (fragment.type === 'ANSWER' || fragment.type === 'RESPONSE') {
@@ -504,7 +513,7 @@ export class DeepSeekStreamHandler {
                 for (const fragment of parsed.v) {
                   if (fragment.content) {
                     let cleanedFragment = fragment.content.replace(/FINISHED/g, '')
-                    cleanedFragment = cleanedFragment.replace(/^(SEARCH|WEB_SEARCH|SEARCHING)\s*/i, '')
+                    cleanedFragment = stripSearchControlMarker(cleanedFragment, shouldStripSearchControlMarker)
                     if (fragment.type === 'THINK') {
                       currentPath = 'thinking'
                       accumulatedThinkingContent += cleanedFragment
@@ -553,7 +562,7 @@ export class DeepSeekStreamHandler {
                 }
                 if (Array.isArray(e.v)) {
                   let cleanedValue = e.v.map((v: any) => v.content).join('').replace(/FINISHED/g, '')
-                  cleanedValue = cleanedValue.replace(/^(SEARCH|WEB_SEARCH|SEARCHING)\s*/i, '')
+                  cleanedValue = stripSearchControlMarker(cleanedValue, shouldStripSearchControlMarker)
                   if (currentPath === 'thinking') {
                     accumulatedThinkingContent += cleanedValue
                   } else if (currentPath === 'content') {
@@ -565,7 +574,7 @@ export class DeepSeekStreamHandler {
 
             if (typeof parsed.v === 'string') {
               let cleanedValue = parsed.v.replace(/FINISHED/g, '')
-              cleanedValue = cleanedValue.replace(/^(SEARCH|WEB_SEARCH|SEARCHING)\s*/i, '')
+              cleanedValue = stripSearchControlMarker(cleanedValue, shouldStripSearchControlMarker)
               if (currentPath === 'thinking') {
                 accumulatedThinkingContent += cleanedValue
               } else if (currentPath === 'content') {

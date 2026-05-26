@@ -302,3 +302,59 @@ test('DeepSeek non-stream keeps tool call content null when citations are presen
   assert.equal(response.choices[0].finish_reason, 'tool_calls')
   assert.equal(response.choices[0].message.tool_calls.length, 1)
 })
+
+test('DeepSeek non-search responses preserve search text at fragment start', async () => {
+  const handler = new DeepSeekStreamHandler('deepseek-v4-flash', 'session-preserve-search', undefined, false)
+  const exactContent = [
+    'search.example.com',
+    'Search should remain at the beginning.',
+    'https://search-api.example.com',
+    'https://example.com/test?search=value',
+  ].join('\n')
+  const source = sse([
+    {
+      v: {
+        response: {
+          thinking_enabled: false,
+          fragments: [{ type: 'RESPONSE', content: exactContent }],
+        },
+      },
+    },
+  ])
+
+  const response: any = await handler.handleNonStream(source)
+
+  assert.equal(response.choices[0].message.content, exactContent)
+})
+
+test('DeepSeek non-search streams preserve search text at chunk start', async () => {
+  const handler = new DeepSeekStreamHandler('deepseek-v4-flash', 'session-preserve-stream-search', undefined, false)
+  const source = sse([
+    { v: { response: { thinking_enabled: false } } },
+    { p: 'response/fragments', o: 'APPEND', v: [{ id: 12, type: 'RESPONSE', content: 'search.example.com' }] },
+  ])
+
+  const output = await collect(await handler.handleStream(source))
+  const joined = output.join('')
+
+  assert.match(joined, /"content":"search\.example\.com"/)
+  assert.doesNotMatch(joined, /"content":"\.example\.com"/)
+})
+
+test('DeepSeek search responses still strip explicit search control markers', async () => {
+  const handler = new DeepSeekStreamHandler('deepseek-v4-flash-search', 'session-strip-search-marker', undefined, true)
+  const source = sse([
+    {
+      v: {
+        response: {
+          thinking_enabled: false,
+          fragments: [{ type: 'RESPONSE', content: 'SEARCH 搜索正文。' }],
+        },
+      },
+    },
+  ])
+
+  const response: any = await handler.handleNonStream(source)
+
+  assert.equal(response.choices[0].message.content, '搜索正文。')
+})
