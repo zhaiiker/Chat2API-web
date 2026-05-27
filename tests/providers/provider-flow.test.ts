@@ -9,6 +9,7 @@ import { glmConfig } from '../../src/main/providers/builtin/glm.ts'
 import { kimiConfig } from '../../src/main/providers/builtin/kimi.ts'
 import { minimaxConfig } from '../../src/main/providers/builtin/minimax.ts'
 import { mimoConfig } from '../../src/main/providers/builtin/mimo.ts'
+import { perplexityConfig } from '../../src/main/providers/builtin/perplexity.ts'
 import { qwenConfig } from '../../src/main/providers/builtin/qwen.ts'
 import { qwenAiConfig } from '../../src/main/providers/builtin/qwen-ai.ts'
 import { zaiConfig } from '../../src/main/providers/builtin/zai.ts'
@@ -412,6 +413,32 @@ test('provider docs cover every built-in provider and Qwen AI manual model addit
     assert.match(qwenAiDoc, new RegExp(displayName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
     assert.match(qwenAiDoc, new RegExp(actualModelId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
   }
+})
+
+test('README Supported Providers model lists mirror current defaults with Perplexity Free mode only', () => {
+  const readme = readFileSync(join(root, 'README.md'), 'utf8')
+  const readmeCn = readFileSync(join(root, 'README_CN.md'), 'utf8')
+  const expectedRows = [
+    ['DeepSeek', deepseekConfig.supportedModels?.join(', ')],
+    ['GLM', glmConfig.supportedModels?.join(', ')],
+    ['Kimi', kimiConfig.supportedModels?.join(', ')],
+    ['MiniMax', minimaxConfig.supportedModels?.join(', ')],
+    ['Mimo', mimoConfig.supportedModels?.join(', ')],
+    ['Perplexity', 'Auto'],
+    ['Qwen', qwenConfig.supportedModels?.join(', ')],
+    ['Qwen AI', qwenAiConfig.supportedModels?.join(', ')],
+    ['Z.ai', zaiConfig.supportedModels?.join(', ')],
+  ]
+
+  assert.deepEqual(perplexityConfig.supportedModels?.[0], 'Auto')
+
+  for (const [provider, models] of expectedRows) {
+    assert.match(readme, new RegExp(`\\| ${provider.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^\\n]*\\| ${models?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\|`))
+    assert.match(readmeCn, new RegExp(`\\| ${provider.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^\\n]*\\| ${models?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\|`))
+  }
+
+  assert.doesNotMatch(readme, /Perplexity[^\n]*(Turbo|PPLX-Pro|GPT-5|Gemini-2\.5-Pro|Claude-Sonnet-4|Claude-Opus-4|Nemotron)/)
+  assert.doesNotMatch(readmeCn, /Perplexity[^\n]*(Turbo|PPLX-Pro|GPT-5|Gemini-2\.5-Pro|Claude-Sonnet-4|Claude-Opus-4|Nemotron)/)
 })
 
 test('Mimo model names and conversation flow match Xiaomi AI Studio web requests', () => {
