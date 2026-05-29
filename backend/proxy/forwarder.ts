@@ -27,7 +27,7 @@ import { sessionManager } from './sessionManager'
 import {
   createContextManagementService,
   SummaryGenerator,
-  ChatMessage as ContextChatMessage,
+  type ChatMessage as ContextChatMessage,
 } from './services/contextManagementService'
 
 function shouldDeleteSession(): boolean {
@@ -463,7 +463,8 @@ export class RequestForwarder {
         deleteSessionCallback,
         transformedRequest.web_search,
         transformedRequest.reasoning_effort,
-        transformed.plan
+        transformed.plan,
+        request.model
       )
       
       if (request.stream) {
@@ -529,7 +530,7 @@ export class RequestForwarder {
       const { response, conversationId } = await adapter.chatCompletion({
         model: actualModel,
         originalModel: request.model,
-        messages: transformedRequest.messages as any,
+        messages: transformedRequest.messages,
         stream: transformedRequest.stream,
         temperature: transformedRequest.temperature,
         web_search: transformedRequest.web_search,
@@ -633,7 +634,7 @@ export class RequestForwarder {
       const { response, conversationId } = await adapter.chatCompletion({
         model: actualModel,
         originalModel: request.model,
-        messages: transformed.messages as any,
+        messages: transformed.messages,
         stream: request.stream,
         temperature: request.temperature,
         enableThinking: !!request.reasoning_effort,
@@ -1002,6 +1003,7 @@ export class RequestForwarder {
       const adapter = new MiniMaxAdapter(provider, account)
       const { response, stream, chatId } = await adapter.chatCompletion({
         model: actualModel,
+        originalModel: request.model,
         messages: transformed.messages as any,
         stream: request.stream,
         temperature: request.temperature,

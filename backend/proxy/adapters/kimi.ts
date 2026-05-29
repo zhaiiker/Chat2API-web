@@ -390,6 +390,101 @@ export class KimiAdapter {
     }
   }
 
+  private async listChats(pageToken?: string): Promise<{ chatIds: string[]; nextPageToken: string }> {
+    const { accessToken } = await this.acquireToken()
+    const response = await axios.post(
+      `${KIMI_API_BASE}/apiv2/kimi.chat.v1.ChatService/ListChats`,
+      {
+        page_size: 100,
+        ...(pageToken ? { page_token: pageToken } : {}),
+        query: '',
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          ...FAKE_HEADERS,
+        },
+        timeout: 15000,
+        validateStatus: () => true,
+      }
+    )
+
+    const data = checkResult(response, this.token)
+    const chats = Array.isArray(data?.chats) ? data.chats : []
+    const chatIds = chats
+      .map((chat: any) => typeof chat?.id === 'string' ? chat.id : '')
+      .filter(Boolean)
+
+    return {
+      chatIds,
+      nextPageToken: typeof data?.nextPageToken === 'string' ? data.nextPageToken : '',
+    }
+  }
+
+  private async batchDeleteChats(chatIds: string[]): Promise<boolean> {
+    if (chatIds.length === 0) {
+      return true
+    }
+
+    const { accessToken } = await this.acquireToken()
+    const response = await axios.post(
+      `${KIMI_API_BASE}/apiv2/kimi.chat.v1.ChatService/BatchDeleteChats`,
+      { chat_ids: chatIds },
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          ...FAKE_HEADERS,
+        },
+        timeout: 30000,
+        validateStatus: () => true,
+      }
+    )
+
+    checkResult(response, this.token)
+    return response.status === 200
+  }
+
+  async deleteAllChats(): Promise<boolean> {
+    try {
+      let allChatIds: string[] = []
+      let pageToken = ''
+
+      for (let page = 0; page < 100; page++) {
+        const result = await this.listChats(pageToken || undefined)
+        allChatIds = [...allChatIds, ...result.chatIds]
+
+        if (!result.nextPageToken || result.chatIds.length === 0) {
+          break
+        }
+
+        pageToken = result.nextPageToken
+      }
+
+      if (allChatIds.length === 0) {
+        console.log('[Kimi] No chats to delete')
+        return true
+      }
+
+      console.log('[Kimi] Found', allChatIds.length, 'chats to delete')
+
+      for (let i = 0; i < allChatIds.length; i += 100) {
+        const batch = allChatIds.slice(i, i + 100)
+        const success = await this.batchDeleteChats(batch)
+        if (!success) {
+          return false
+        }
+      }
+
+      console.log('[Kimi] All chats deleted successfully')
+      return true
+    } catch (error) {
+      console.error('[Kimi] Failed to delete all chats:', error)
+      return false
+    }
+  }
+
   static isKimiProvider(provider: Provider): boolean {
     return provider.id === 'kimi' || provider.apiEndpoint.includes('kimi.com')
   }

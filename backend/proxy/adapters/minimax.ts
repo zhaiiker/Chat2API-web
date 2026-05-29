@@ -72,6 +72,7 @@ interface MiniMaxMessage {
 
 interface ChatCompletionRequest {
   model: string
+  originalModel?: string
   messages: MiniMaxMessage[]
   stream?: boolean
   temperature?: number
@@ -189,7 +190,7 @@ export class MiniMaxAdapter {
     this.provider = provider
     this.account = account
     this.rawToken = account.credentials.token || ''
-    this.model = 'MiniMax-M2.5'
+    this.model = 'MiniMax-M2.7'
     this.created = unixTimestamp()
 
     // Check if realUserID is provided separately in credentials
@@ -548,7 +549,7 @@ export class MiniMaxAdapter {
   async chatCompletion(request: ChatCompletionRequest): Promise<{ response: AxiosResponse | null; stream: { session: ClientHttp2Session; stream: ClientHttp2Stream } | null; chatId: string }> {
     console.log('[MiniMax] chatCompletion called with model:', request.model, 'stream:', request.stream)
     
-    this.model = request.model || 'MiniMax-M2.5'
+    this.model = request.model || 'MiniMax-M2.7'
     this.created = unixTimestamp()
     
     const deviceInfo = await this.requestDeviceInfo()
