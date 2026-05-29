@@ -2,7 +2,7 @@
   "id": "FEAT-001",
   "type": "feat",
   "description": "Port upstream qwen.ts changes: add new helper methods (getApiHeaders, getApiParams, extractSessionIds, listSessions, deleteRelatedFileRecords, deleteSessions, deleteAllChats), QwenSessionListPage interface, refactor deleteSession to use deleteSessions helper, fix thinking model mapping from tongyi-qwen3-max-model-agent to Qwen3-Max/Qwen3-Max-Thinking-Preview, remove originalModel from ChatCompletionRequest interface (upstream removed it but code still references request.originalModel from forwarder call)",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "In /projects/sandbox/Chat2API-web/backend/proxy/adapters/qwen.ts: Remove 'originalModel?: string' from the ChatCompletionRequest interface (line ~72). The field is still passed from forwarder but the interface doesn't declare it in upstream - actually keep it since web's forwarder uses it and the code references it.",
     "Add the QwenSessionListPage interface after ChatCompletionRequest: interface QwenSessionListPage { sessionIds: string[]; hasMore: boolean; nextCursor: string }",
@@ -30,5 +30,5 @@
     "grep for 'tongyi-qwen3-max' should return zero results (old mapping removed)"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "All changes applied successfully. The web file already had QWEN_CHAT2_API_BASE, QWEN_CHAT_SIDE_API_BASE constants and updated MODEL_MAP from prior workspace edits. Added all 6 helper methods, QwenSessionListPage interface, refactored deleteSession, added deleteAllChats, and fixed thinking model mapping. Network is INTEGRATIONS_ONLY so no build/test verification possible. No .ts import extensions introduced. Kept originalModel in ChatCompletionRequest as web needs it."
 }
