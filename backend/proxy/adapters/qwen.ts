@@ -26,15 +26,16 @@ function hasToolCalls(content: string): boolean {
 }
 
 const QWEN_API_BASE = 'https://chat2.qianwen.com'
+const QWEN_CHAT2_API_BASE = 'https://chat2-api.qianwen.com'
+const QWEN_CHAT_SIDE_API_BASE = 'https://chat-side.qianwen.com'
 
 const MODEL_MAP: Record<string, string> = {
-  'Qwen3': 'tongyi-qwen3-max-model-agent',
-  'Qwen3-Max': 'tongyi-qwen3-max-model-agent',
-  'Qwen3-Max-Thinking': 'tongyi-qwen3-max-thinking-agent',
-  'Qwen3-Plus': 'tongyi-qwen-plus-agent',
-  'Qwen3.5-Plus': 'Qwen3.5-Plus',
-  'Qwen3-Flash': 'qwen3-flash',
-  'Qwen3-Coder': 'qwen3-coder-plus',
+  'Qwen3.6': 'Qwen',
+  'Qwen3.7-Max': 'Qwen3.7-Max',
+  'Qwen3.5-Flash': 'Qwen3.5-Flash',
+  'Qwen3-Max': 'Qwen3-Max',
+  'Qwen3-Max-Thinking-Preview': 'Qwen3-Max-Thinking-Preview',
+  'Qwen3-Coder': 'Qwen3-Coder',
 }
 
 const DEFAULT_HEADERS = {
@@ -71,6 +72,12 @@ interface ChatCompletionRequest {
   reasoning_effort?: 'low' | 'medium' | 'high'
   enableThinking?: boolean
   enableWebSearch?: boolean
+}
+
+interface QwenSessionListPage {
+  sessionIds: string[]
+  hasMore: boolean
+  nextCursor: string
 }
 
 function uuid(separator: boolean = true): string {
@@ -130,6 +137,157 @@ export class QwenAdapter {
     return model
   }
 
+  private getApiHeaders(ticket: string): Record<string, string> {
+    return {
+      Cookie: `tongyi_sso_ticket=${ticket}`,
+      ...DEFAULT_HEADERS,
+      'Content-Type': 'application/json',
+      'X-Platform': 'pc_tongyi',
+      'X-DeviceId': '5b68c267-cd8e-fd0e-148a-18345bc9a104',
+    }
+  }
+
+  private getApiParams(extra: Record<string, string | number> = {}): Record<string, string | number> {
+    return {
+      biz_id: 'ai_qwen',
+      chat_client: 'h5',
+      device: 'pc',
+      fr: 'pc',
+      pr: 'qwen',
+      ut: '5b68c267-cd8e-fd0e-148a-18345bc9a104',
+      la: 'zh_CN',
+      tz: 'Asia/Shanghai',
+      wv: '1',
+      ve: '1',
+      ...extra,
+    }
+  }
+
+  private extractSessionIds(data: any): string[] {
+    const candidateLists = [
+      data?.data?.list,
+      data?.data?.sessions,
+      data?.data?.sessionList,
+      data?.data?.records,
+      data?.data?.items,
+      data?.data?.dataList,
+      data?.data?.result?.list,
+      data?.data?.result?.records,
+      data?.data?.pageData?.list,
+      data?.data?.pageData?.records,
+      data?.list,
+      data?.sessions,
+    ].filter(Array.isArray)
+
+    const sessionIds = candidateLists.flatMap((items: any[]) => (
+      items
+        .map((item: any) => item?.session_id || item?.sessionId || item?.session?.id || item?.id)
+        .filter((sessionId: any): sessionId is string => typeof sessionId === 'string' && sessionId.length > 0)
+    ))
+
+    return [...new Set(sessionIds)]
+  }
+
+  private async listSessions(pageNum: number, cursor?: string): Promise<QwenSessionListPage> {
+    const ticket = this.getTicket()
+    if (!ticket) {
+      throw new Error('Qwen ticket not configured, please add ticket in account settings')
+    }
+
+    const response = await axios.post(
+      `${QWEN_CHAT2_API_BASE}/api/v2/session/page/list`,
+      {
+        pageSize: 100,
+        pageNum,
+        ...(cursor ? { cursor } : {}),
+      },
+      {
+        headers: this.getApiHeaders(ticket),
+        params: this.getApiParams(),
+        timeout: 15000,
+        validateStatus: () => true,
+      }
+    )
+
+    if (response.status !== 200 || response.data?.success === false) {
+      throw new Error(`Qwen session list failed: HTTP ${response.status}`)
+    }
+
+    const data = response.data?.data || {}
+    const nextCursor = data.nextCursor || data.next_cursor || data.cursor || ''
+
+    return {
+      sessionIds: this.extractSessionIds(response.data),
+      hasMore: Boolean(data.hasMore ?? data.has_more ?? data.page?.hasMore ?? data.result?.hasMore),
+      nextCursor: typeof nextCursor === 'string' ? nextCursor : '',
+    }
+  }
+
+  private async deleteRelatedFileRecords(sessionIds: string[]): Promise<boolean> {
+    const ticket = this.getTicket()
+    if (!ticket || sessionIds.length === 0) {
+      return true
+    }
+
+    const timestamp = Date.now()
+    const response = await axios.post(
+      `${QWEN_CHAT_SIDE_API_BASE}/api/v2/file/record/delete`,
+      { sessionIds },
+      {
+        headers: this.getApiHeaders(ticket),
+        params: this.getApiParams({
+          nonce: generateNonce(),
+          timestamp,
+        }),
+        timeout: 15000,
+        validateStatus: () => true,
+      }
+    )
+
+    if (response.status !== 200 || response.data?.success === false) {
+      console.warn('[Qwen] Failed to delete related file records:', response.status, response.data)
+      return false
+    }
+
+    return true
+  }
+
+  private async deleteSessions(sessionIds: string[]): Promise<boolean> {
+    const ticket = this.getTicket()
+    if (!ticket || sessionIds.length === 0) {
+      return sessionIds.length === 0
+    }
+
+    const response = await axios.post(
+      `${QWEN_CHAT2_API_BASE}/api/v1/session/delete/batch`,
+      { session_ids: sessionIds },
+      {
+        headers: this.getApiHeaders(ticket),
+        params: this.getApiParams(),
+        timeout: 15000,
+        validateStatus: () => true,
+      }
+    )
+
+    if (response.status !== 200) {
+      console.warn(`[Qwen] Failed to delete sessions: status ${response.status}`)
+      return false
+    }
+
+    const { success, code, msg } = response.data || {}
+    if (success === false || (typeof code === 'number' && code !== 0)) {
+      console.warn(`[Qwen] Failed to delete sessions: ${msg || 'Unknown error'}`)
+      return false
+    }
+
+    const fileRecordSuccess = await this.deleteRelatedFileRecords(sessionIds)
+    if (!fileRecordSuccess) {
+      console.warn('[Qwen] Sessions deleted but related file record cleanup failed')
+    }
+
+    return true
+  }
+
   async chatCompletion(request: ChatCompletionRequest): Promise<{
     response: AxiosResponse
     sessionId: string
@@ -167,8 +325,8 @@ export class QwenAdapter {
     // Map thinking mode to model
     if (enableThinking) {
       // Use thinking model if available
-      if (actualModel === 'tongyi-qwen3-max-model-agent') {
-        actualModel = 'tongyi-qwen3-max-thinking-agent'
+      if (actualModel === 'Qwen3-Max') {
+        actualModel = 'Qwen3-Max-Thinking-Preview'
         console.log('[Qwen] Using thinking model:', actualModel)
       }
     }
@@ -278,50 +436,60 @@ export class QwenAdapter {
 
   async deleteSession(sessionId: string): Promise<boolean> {
     try {
-      const ticket = this.getTicket()
-      if (!ticket || !sessionId) {
+      if (!sessionId) {
         return false
       }
 
-      const response = await axios.post(
-        'https://chat2-api.qianwen.com/api/v1/session/delete/batch',
-        { session_ids: [sessionId] },
-        {
-          headers: {
-            Cookie: `tongyi_sso_ticket=${ticket}`,
-            ...DEFAULT_HEADERS,
-            'X-Platform': 'pc_tongyi',
-            'X-DeviceId': '5b68c267-cd8e-fd0e-148a-18345bc9a104',
-          },
-          params: {
-            biz_id: 'ai_qwen',
-            chat_client: 'h5',
-            device: 'pc',
-            fr: 'pc',
-            pr: 'qwen',
-            ut: '5b68c267-cd8e-fd0e-148a-18345bc9a104',
-          },
-          timeout: 15000,
-          validateStatus: () => true,
-        }
-      )
-
-      if (response.status !== 200) {
-        console.warn(`[Qwen] Failed to delete session ${sessionId}: status ${response.status}`)
-        return false
+      const success = await this.deleteSessions([sessionId])
+      if (success) {
+        console.log('[Qwen] Session deleted successfully:', sessionId)
       }
-
-      const { success, code, msg } = response.data
-      if (success === false || code !== 0) {
-        console.warn(`[Qwen] Failed to delete session ${sessionId}: ${msg || 'Unknown error'}`)
-        return false
-      }
-
-      console.log('[Qwen] Session deleted successfully:', sessionId)
-      return true
+      return success
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       console.warn('[Qwen] Failed to delete session:', errorMessage)
+      return false
+    }
+  }
+
+  async deleteAllChats(): Promise<boolean> {
+    try {
+      let allSessionIds: string[] = []
+      let nextCursor = ''
+
+      for (let pageNum = 1; pageNum <= 100; pageNum++) {
+        const result = await this.listSessions(pageNum, nextCursor || undefined)
+        allSessionIds = [...allSessionIds, ...result.sessionIds]
+
+        if (!result.hasMore || result.sessionIds.length === 0) {
+          break
+        }
+
+        nextCursor = result.nextCursor
+      }
+
+      allSessionIds = [...new Set(allSessionIds)]
+
+      if (allSessionIds.length === 0) {
+        console.log('[Qwen] No sessions to delete')
+        return true
+      }
+
+      console.log('[Qwen] Found', allSessionIds.length, 'sessions to delete')
+
+      for (let i = 0; i < allSessionIds.length; i += 100) {
+        const batch = allSessionIds.slice(i, i + 100)
+        const success = await this.deleteSessions(batch)
+        if (!success) {
+          return false
+        }
+      }
+
+      console.log('[Qwen] All sessions deleted successfully')
+      return true
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      console.warn('[Qwen] Failed to delete all sessions:', errorMessage)
       return false
     }
   }

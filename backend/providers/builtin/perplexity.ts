@@ -15,26 +15,12 @@ export const perplexityConfig: BuiltinProviderConfig = {
     'Referer': 'https://www.perplexity.ai/',
   },
   enabled: true,
-  description: 'Perplexity AI search assistant with multi-model support and web search enhancement',
+  description: 'Perplexity AI search assistant with Free Auto mode and web search enhancement',
   supportedModels: [
     'Auto',
-    'Turbo',
-    'PPLX-Pro',
-    'GPT-5',
-    'Gemini-2.5-Pro',
-    'Claude-Sonnet-4',
-    'Claude-Opus-4',
-    'Nemotron',
   ],
   modelMappings: {
     'Auto': 'auto',
-    'Turbo': 'turbo',
-    'PPLX-Pro': 'pplx_pro',
-    'GPT-5': 'gpt5',
-    'Gemini-2.5-Pro': 'gemini25pro',
-    'Claude-Sonnet-4': 'claude4sonnet',
-    'Claude-Opus-4': 'claude4opus',
-    'Nemotron': 'nemotron',
   },
   credentialFields: [
     {

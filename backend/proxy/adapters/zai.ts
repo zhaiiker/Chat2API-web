@@ -20,23 +20,24 @@ import {
 } from '../utils/streamToolHandler'
 
 const ZAI_API_BASE = 'https://chat.z.ai'
-const X_FE_VERSION = 'prod-fe-1.0.241'
+const X_FE_VERSION = 'prod-fe-1.1.37'
+const ZAI_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'
 
 const FAKE_HEADERS = {
   Accept: '*/*',
   'Accept-Encoding': 'gzip, deflate, br, zstd',
-  'Accept-Language': 'zh-CN,zh;q=0.9',
+  'Accept-Language': 'zh-CN',
   'Cache-Control': 'no-cache',
   Origin: ZAI_API_BASE,
   Pragma: 'no-cache',
-  'Sec-Ch-Ua': '"Chromium";v="144", "Not(A:Brand";v="8", "Google Chrome";v="144"',
+  'Sec-Ch-Ua': '"Not/A)Brand";v="99", "Chromium";v="148"',
   'Sec-Ch-Ua-Mobile': '?0',
-  'Sec-Ch-Ua-Platform': '"Windows"',
+  'Sec-Ch-Ua-Platform': '"macOS"',
   'Sec-Fetch-Dest': 'empty',
   'Sec-Fetch-Mode': 'cors',
   'Sec-Fetch-Site': 'same-origin',
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
-  'X-FE-Version': X_FE_VERSION,
+  'User-Agent': ZAI_USER_AGENT,
+  'X-Region': 'domestic',
 }
 
 const SEARCH_CITATION_PATTERN = '【turn\\d+search\\d+】'
@@ -119,6 +120,11 @@ export class ZaiAdapter {
   private getToken(): string {
     const credentials = this.account.credentials
     return credentials.token || credentials.accessToken || credentials.jwt || ''
+  }
+
+  private getCaptchaVerifyParam(): string | undefined {
+    const credentials = this.account.credentials
+    return credentials.captcha_verify_param || credentials.captchaVerifyParam || undefined
   }
 
   private async ensureToken(): Promise<string> {
@@ -208,7 +214,7 @@ export class ZaiAdapter {
     const requestBody = {
       chat: {
         id: '',
-        title: 'New Chat',
+        title: '新聊天',
         models: [model],
         params: {},
         history: {
@@ -235,11 +241,12 @@ export class ZaiAdapter {
           },
         ],
         mcp_servers: [],
-        enable_thinking: false,
+        enable_thinking: true,
         auto_web_search: false,
         message_version: 1,
         extra: {},
         timestamp: Date.now(),
+        type: 'default',
       },
     }
     
@@ -250,11 +257,9 @@ export class ZaiAdapter {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'X-FE-Version': X_FE_VERSION,
+          ...FAKE_HEADERS,
           'Cookie': `token=${token}`,
-          Origin: ZAI_API_BASE,
           Referer: `${ZAI_API_BASE}/`,
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
         },
         timeout: 15000,
         validateStatus: () => true,
@@ -336,24 +341,22 @@ export class ZaiAdapter {
     console.log('[Z.ai] chatCompletion called with request.model:', request.model)
     
     // Z.ai API requires specific model name casing:
-    // - GLM-5-Turbo: uppercase (only this one needs uppercase)
-    // - glm-5, glm-4.7, glm-4.6v, glm-4.5v, glm-4.5-air: lowercase
+    // - GLM-5.1 and GLM-5-Turbo keep uppercase
+    // - GLM-5V-Turbo uses lowercase "v" in the request model id
+    // - GLM-5 and GLM-4.7 use lowercase request model ids
     const modelMapping: Record<string, string> = {
-      'glm-5-turbo': 'GLM-5-Turbo',  // Only GLM-5-Turbo needs uppercase
+      'glm-5.1': 'GLM-5.1',
+      'glm-5-turbo': 'GLM-5-Turbo',
+      'glm-5v-turbo': 'GLM-5v-Turbo',
       'glm-5': 'glm-5',
       'glm-4.7': 'glm-4.7',
-      'glm-4.6v': 'glm-4.6v',
-      'glm-4.6': 'glm-4.6v',
-      'glm-4.5v': 'glm-4.5v',
-      'glm-4.5-air': 'glm-4.5-air',
       // Also handle uppercase input
+      'GLM-5.1': 'GLM-5.1',
       'GLM-5-Turbo': 'GLM-5-Turbo',
+      'GLM-5V-Turbo': 'GLM-5v-Turbo',
+      'GLM-5v-Turbo': 'GLM-5v-Turbo',
       'GLM-5': 'glm-5',
       'GLM-4.7': 'glm-4.7',
-      'GLM-4.6V': 'glm-4.6v',
-      'GLM-4.6': 'glm-4.6v',
-      'GLM-4.5V': 'glm-4.5v',
-      'GLM-4.5-Air': 'glm-4.5-air',
     }
     const mappedModel = modelMapping[request.model] || modelMapping[request.model.toLowerCase()] || request.model
     
@@ -408,7 +411,7 @@ export class ZaiAdapter {
     const modelForDetection = request.originalModel || request.model
     const modelLower = modelForDetection.toLowerCase()
     
-    let enableThinking = !!request.reasoning_effort
+    let enableThinking = request.reasoning_effort === false ? false : true
     let enableWebSearch = !!request.web_search
     
     // Auto-enable based on model name (if not explicitly set)
@@ -435,7 +438,7 @@ export class ZaiAdapter {
       enable_thinking: enableThinking,
     }
 
-    const requestBody = {
+    const requestBody: Record<string, any> = {
       stream: request.stream !== false,
       model: mappedModel,
       messages: processedMessages,
@@ -450,8 +453,8 @@ export class ZaiAdapter {
         '{{CURRENT_DATE}}': new Date().toISOString().substring(0, 10),
         '{{CURRENT_TIME}}': new Date().toISOString().substring(11, 19),
         '{{CURRENT_WEEKDAY}}': ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][new Date().getDay()],
-        '{{CURRENT_TIMEZONE}}': 'UTC',
-        '{{USER_LANGUAGE}}': 'en-US',
+        '{{CURRENT_TIMEZONE}}': 'Asia/Shanghai',
+        '{{USER_LANGUAGE}}': 'zh-CN',
       },
       chat_id: chatId,
       id: requestId,
@@ -461,6 +464,11 @@ export class ZaiAdapter {
         title_generation: true,
         tags_generation: true,
       },
+    }
+
+    const captchaVerifyParam = this.getCaptchaVerifyParam()
+    if (captchaVerifyParam) {
+      requestBody.captcha_verify_param = captchaVerifyParam
     }
 
     console.log('[Z.ai] Sending chat request...')
@@ -476,7 +484,7 @@ export class ZaiAdapter {
       version: '0.0.1',
       platform: 'web',
       token,
-      user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
+      user_agent: ZAI_USER_AGENT,
       language: 'zh-CN',
       languages: 'zh-CN,zh',
       timezone: 'Asia/Shanghai',
@@ -514,23 +522,13 @@ export class ZaiAdapter {
       requestBody,
       {
         headers: {
-          'Accept': '*/*',
-          'Accept-Encoding': 'gzip, deflate, br, zstd',
-          'Accept-Language': 'zh-CN',
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
+          ...FAKE_HEADERS,
           'X-Signature': signature,
           'X-FE-Version': X_FE_VERSION,
           'Cookie': `token=${token}`,
-          Origin: ZAI_API_BASE,
           Referer: `${ZAI_API_BASE}/c/${chatId}`,
-          'Sec-Fetch-Dest': 'empty',
-          'Sec-Fetch-Mode': 'cors',
-          'Sec-Fetch-Site': 'same-origin',
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
-          'sec-ch-ua': '"Not(A:Brand";v="8", "Chromium";v="144", "Google Chrome";v="144"',
-          'sec-ch-ua-mobile': '?0',
-          'sec-ch-ua-platform': '"macOS"',
           Priority: 'u=1, i',
         },
         responseType: 'stream',
@@ -541,7 +539,11 @@ export class ZaiAdapter {
 
     console.log('[Z.ai] Response status:', response.status)
     if (response.status !== 200) {
-      console.log('[Z.ai] Error: non-200 response, requestId:', requestId)
+      console.log('[Z.ai] Request body:', JSON.stringify(requestBody, null, 2))
+      console.log('[Z.ai] Signature:', signature)
+      console.log('[Z.ai] Timestamp:', timestamp)
+      console.log('[Z.ai] RequestId:', requestId)
+      console.log('[Z.ai] UserId:', userId)
       if (response.data && typeof response.data.on === 'function') {
         const chunks: Buffer[] = []
         response.data.on('data', (chunk: Buffer) => chunks.push(chunk))
