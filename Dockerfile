@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1.7
-
 ###############################################################################
 # Stage 1: install dependencies and build both backend and frontend bundles.
 ###############################################################################
@@ -8,8 +6,7 @@ WORKDIR /app
 
 # Install dependencies first to leverage Docker layer caching.
 COPY package.json package-lock.json* ./
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --no-audit --no-fund
+RUN npm ci --no-audit --no-fund
 
 COPY tsconfig*.json vite.config.ts postcss.config.mjs tailwind.config.mjs components.json ./
 COPY sha3_wasm_bg.*.wasm ./
@@ -32,8 +29,7 @@ ENV NODE_ENV=production \
 
 # Only the runtime needs prod dependencies.
 COPY package.json package-lock.json* ./
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev --no-audit --no-fund && \
+RUN npm ci --omit=dev --no-audit --no-fund && \
     npm cache clean --force
 
 COPY --from=builder /app/dist ./dist
