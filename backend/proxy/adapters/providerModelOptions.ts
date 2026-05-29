@@ -12,20 +12,20 @@ export interface DeepSeekChatOptions {
 
 export function resolveDeepSeekChatOptions(
   request: DeepSeekChatOptionInput,
-  prompt: string = ''
+  _prompt: string = ''
 ): DeepSeekChatOptions {
   const modelLower = request.model.toLowerCase()
-  const searchEnabled = Boolean(request.web_search) || modelLower.includes('search')
-  const thinkingEnabled = Boolean(request.reasoning_effort)
+  const isProModel = modelLower.includes('deepseek-v4-pro') || modelLower.includes('expert')
+  const isSearchAlias = modelLower.includes('search')
+  const isThinkingAlias = modelLower.includes('think')
     || modelLower.includes('r1')
-    || modelLower.includes('think')
     || modelLower.includes('reasoner')
-    || prompt.includes('deep thinking')
 
   return {
-    modelType: modelLower.includes('pro') || modelLower.includes('expert') ? 'expert' : 'default',
-    searchEnabled,
-    thinkingEnabled,
+    modelType: isProModel ? 'expert' : 'default',
+    searchEnabled: Boolean(request.web_search) || isSearchAlias,
+    thinkingEnabled: Boolean(request.reasoning_effort)
+      || isThinkingAlias,
   }
 }
 
