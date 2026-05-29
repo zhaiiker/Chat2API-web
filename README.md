@@ -5,10 +5,10 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Release-v1.3.0-blue?style=flat-square&logo=github" alt="Release">
+  <img src="https://img.shields.io/badge/Release-v1.4.0-blue?style=flat-square&logo=github" alt="Release">
   <img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=flat-square" alt="License">
   <br>
-  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js"></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-20+-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React"></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"></a>
   <img src="https://img.shields.io/badge/Platform-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey?style=flat-square" alt="Platform">
@@ -37,6 +37,7 @@
 - **Function Calling** — Universal tool calling via prompt engineering, compatible with Cherry Studio, Kilo Code, Cline
 - **Model Mapping** — Flexible model name mapping with wildcard and preferred provider/account
 - **Load Balancing** — Round-robin, fill-first, and failover strategies across multiple accounts
+- **Session Management** — Auto-cleanup of provider chat sessions, batch deletion support
 - **API Key Management** — Generate and manage keys for proxy authentication
 - **Dashboard** — Real-time request traffic, latency, and success rate monitoring
 - **Request Logs** — Detailed logging for debugging and analysis
@@ -45,23 +46,90 @@
 
 ## 🤖 Supported Providers
 
-| Provider         | Auth Type     | Models |
-| ---------------- | ------------- | ------ |
-| DeepSeek         | User Token    | DeepSeek-V3.2, V4 Pro/Flash |
-| GLM              | Refresh Token | GLM-5, GLM-5-Flash |
-| Kimi             | JWT Token     | Kimi-K2.6, K2.5 |
-| MiniMax          | JWT Token     | MiniMax-M2.5 |
-| Perplexity       | Session Token | Auto, Turbo, GPT-5, Claude Sonnet/Opus |
-| Qwen (CN)        | SSO Ticket    | Qwen3.5-Plus, Qwen3-Coder |
-| Qwen AI (Global) | JWT Token     | Qwen3.5-Plus, Qwen3-Max |
-| Z.ai             | JWT Token     | GLM-5, GLM-4.7 |
-| Mimo             | Service Token | MiMo models |
+| Provider | Auth Type | Models |
+| --- | --- | --- |
+| DeepSeek | User Token | deepseek-v4-pro, deepseek-v4-flash |
+| GLM | Refresh Token | GLM-5.1 |
+| Kimi | JWT Token | Kimi-K2.6 |
+| MiniMax | JWT Token | MiniMax-M2.7 |
+| Perplexity | Session Token | Auto (Free) |
+| Qwen (CN) | SSO Ticket | Qwen3.6, Qwen3.7-Max, Qwen3.5-Flash, Qwen3-Max, Qwen3-Coder |
+| Qwen AI (Global) | JWT Token | Qwen3.7-Max, Qwen3.6-Plus, Qwen3.6-35B-A3B, Qwen3.6-27B, Qwen3-Coder |
+| Z.ai | JWT Token | GLM-5.1, GLM-5-Turbo, GLM-5V-Turbo, GLM-5, GLM-4.7 |
+| Mimo | Service Token | MiMo models |
 
 ## 📥 Installation
 
-### Option 1: Direct Deployment (Recommended)
+### Option 1: Docker (Recommended)
 
-**Requirements:** Node.js 20+, npm, Git
+The simplest way to deploy. Requires only Docker and Docker Compose.
+
+```bash
+# Clone the repo
+git clone https://github.com/zhaiiker/Chat2API-web.git
+cd Chat2API-web
+
+# Build and start in background
+docker compose up -d --build
+
+# View logs
+docker compose logs -f chat2api
+```
+
+The service will be available at `http://your-server:8080`.
+
+**Custom port:**
+
+```bash
+# Edit docker-compose.yml ports section, or use:
+docker compose up -d --build
+# Then map host port as needed
+```
+
+To change the exposed port, edit `docker-compose.yml`:
+
+```yaml
+ports:
+  - "9000:8080"  # Map host port 9000 to container port 8080
+```
+
+**Environment variables (optional):**
+
+Create a `.env` file in the project root:
+
+```env
+CHAT2API_MANAGEMENT_SECRET=your-secret-here
+CHAT2API_ENCRYPTION_KEY=your-encryption-key-here
+```
+
+Or generate a secure secret:
+
+```bash
+openssl rand -hex 32
+```
+
+**Data persistence:** The `docker-compose.yml` uses a named volume (`chat2api-data`) mapped to `/data` inside the container. All configuration, accounts, and logs are preserved across container restarts and rebuilds.
+
+**Common Docker commands:**
+
+```bash
+# Stop the service
+docker compose down
+
+# Rebuild after pulling updates
+git pull
+docker compose up -d --build
+
+# View real-time logs
+docker compose logs -f chat2api
+
+# Reset data (caution: deletes all settings)
+docker compose down -v
+```
+
+### Option 2: Direct Deployment
+
+**Requirements:** Node.js 20+ (LTS recommended: 22.x), npm, Git
 
 ```bash
 # Clone
@@ -76,10 +144,6 @@ npm run build
 
 # Start (default port 8080)
 PORT=8080 node dist/backend/index.js
-
-# Start (Windows PowerShell)
-$env:PORT="8080"; $env:HOST="0.0.0.0"; node dist/backend/index.js
-
 ```
 
 Open `http://your-server:8080` in a browser. On first visit you'll set an administrator password.
@@ -98,27 +162,15 @@ pm2 save
 
 # View logs
 pm2 logs chat2api
+
+# Restart after update
+git pull && npm ci && npm run build
+pm2 restart chat2api
 ```
-
-### Option 2: Docker
-
-```bash
-# Build and start
-docker compose up -d --build
-
-# View logs
-docker compose logs -f chat2api
-```
-
-Or with custom port:
-
-```bash
-PORT=9000 docker compose up -d --build
-```
-
-The `docker-compose.yml` uses a named volume (`chat2api-data`) so data persists across container restarts.
 
 ### Option 3: Development Mode
+
+**Requirements:** Node.js 20+, npm
 
 ```bash
 npm ci
@@ -129,15 +181,17 @@ This starts both backend (port 8080) and frontend dev server (port 5173) with ho
 
 ## ⚙️ Configuration
 
-All configuration is done via environment variables or the `.env` file:
+All configuration is done via environment variables or the `.env` file in the project root:
 
 | Variable | Default | Description |
 | --- | --- | --- |
 | `PORT` | `8080` | Server port |
 | `HOST` | `0.0.0.0` | Bind address |
-| `CHAT2API_DATA_DIR` | `~/.chat2api` | Data directory |
-| `CHAT2API_MANAGEMENT_SECRET` | _(auto)_ | Pin management API secret |
-| `CHAT2API_ENCRYPTION_KEY` | _(auto)_ | Pin credential encryption key |
+| `CHAT2API_DATA_DIR` | `~/.chat2api` | Data directory (Docker: `/data`) |
+| `CHAT2API_MANAGEMENT_SECRET` | _(auto-generated)_ | Management API secret (pin for persistence) |
+| `CHAT2API_ENCRYPTION_KEY` | _(auto-generated)_ | Credential encryption key (pin for persistence) |
+
+> **Tip:** In production, always pin `CHAT2API_MANAGEMENT_SECRET` and `CHAT2API_ENCRYPTION_KEY` so they survive container restarts. Auto-generated keys change on each cold start, which would invalidate existing sessions and encrypted credentials.
 
 ## 🔧 Usage
 
@@ -147,6 +201,15 @@ All configuration is done via environment variables or the `.env` file:
 4. Point your AI client to `http://your-server:8080/v1` with the API key
 
 Works with Cherry Studio, Chatbox, OpenCat, Cline, Roo-Code, or any OpenAI-compatible tool.
+
+## 🔄 What's New in v1.4.0
+
+- **Model Updates** — All providers synced to latest upstream models (DeepSeek V4, GLM-5.1, Qwen3.6/3.7, MiniMax-M2.7, etc.)
+- **Session Management** — Qwen and Kimi now support batch session listing and deletion
+- **DeepSeek Search Enhancement** — Improved search result merging, citation handling, and semantic model detection
+- **Z.ai Captcha Support** — New `captcha_verify_param` credential field for verification bypass
+- **Thinking Mode Improvements** — Better thinking/search/fold mode detection across all providers
+- **Updated Browser Fingerprints** — Chrome 148 UA and headers for DeepSeek, Z.ai
 
 ## 📄 License
 

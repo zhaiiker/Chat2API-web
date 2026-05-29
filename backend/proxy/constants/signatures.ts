@@ -19,7 +19,7 @@ export type ClientType =
 /**
  * Tool call output format
  */
-export type ToolCallFormat = 'bracket' | 'xml' | 'anthropic' | 'json' | 'native'
+export type ToolCallFormat = 'bracket' | 'xml' | 'anthropic' | 'json' | 'native' | 'unknown'
 
 /**
  * Client signature configuration
@@ -169,6 +169,7 @@ export const FORMAT_SIGNATURES: Record<ToolCallFormat, string[]> = {
   anthropic: ['<antml:function_calls>', 'antml:invoke', '</antml:function_calls>'],
   json: ['"tool_calls"', '"function"', '"arguments"'],
   native: [],
+  unknown: [],
 }
 
 /**

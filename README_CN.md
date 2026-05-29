@@ -5,10 +5,10 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Release-v1.3.0-blue?style=flat-square&logo=github" alt="Release">
+  <img src="https://img.shields.io/badge/Release-v1.4.0-blue?style=flat-square&logo=github" alt="Release">
   <img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=flat-square" alt="License">
   <br>
-  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js"></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-20+-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React"></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"></a>
   <img src="https://img.shields.io/badge/Platform-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey?style=flat-square" alt="Platform">
@@ -37,6 +37,7 @@
 - **工具调用** — 通过提示词工程为所有模型提供通用工具调用能力，兼容 Cherry Studio、Kilo Code、Cline
 - **模型映射** — 灵活的模型名称映射，支持通配符和首选服务商/账户
 - **负载均衡** — 轮询、填充优先、故障转移策略，跨多账户分发请求
+- **会话管理** — 自动清理供应商会话，支持批量删除
 - **API Key 管理** — 生成和管理代理认证密钥
 - **仪表盘** — 实时请求流量、延迟、成功率监控
 - **请求日志** — 详细日志记录，便于调试和分析
@@ -47,21 +48,100 @@
 
 | 服务商 | 认证类型 | 模型 |
 | --- | --- | --- |
-| DeepSeek | User Token | DeepSeek-V3.2、V4 Pro/Flash |
-| GLM | Refresh Token | GLM-5、GLM-5-Flash |
-| Kimi | JWT Token | Kimi-K2.6、K2.5 |
-| MiniMax | JWT Token | MiniMax-M2.5 |
-| Perplexity | Session Token | Auto、Turbo、GPT-5、Claude Sonnet/Opus |
-| Qwen（国内版） | SSO Ticket | Qwen3.5-Plus、Qwen3-Coder |
-| Qwen AI（国际版） | JWT Token | Qwen3.5-Plus、Qwen3-Max |
-| Z.ai | JWT Token | GLM-5、GLM-4.7 |
+| DeepSeek | User Token | deepseek-v4-pro, deepseek-v4-flash |
+| GLM | Refresh Token | GLM-5.1 |
+| Kimi | JWT Token | Kimi-K2.6 |
+| MiniMax | JWT Token | MiniMax-M2.7 |
+| Perplexity | Session Token | Auto（免费） |
+| Qwen（国内版） | SSO Ticket | Qwen3.6, Qwen3.7-Max, Qwen3.5-Flash, Qwen3-Max, Qwen3-Coder |
+| Qwen AI（国际版） | JWT Token | Qwen3.7-Max, Qwen3.6-Plus, Qwen3.6-35B-A3B, Qwen3.6-27B, Qwen3-Coder |
+| Z.ai | JWT Token | GLM-5.1, GLM-5-Turbo, GLM-5V-Turbo, GLM-5, GLM-4.7 |
 | Mimo | Service Token | MiMo 模型 |
 
-## 📥 安装
+## 📥 安装部署
 
-### 方式一：直接部署（推荐）
+### 方式一：Docker 部署（推荐）
 
-**环境要求：** Node.js 20+、npm、Git
+最简单的部署方式，只需要 Docker 和 Docker Compose。
+
+```bash
+# 克隆仓库
+git clone https://github.com/zhaiiker/Chat2API-web.git
+cd Chat2API-web
+
+# 构建并后台启动
+docker compose up -d --build
+
+# 查看日志
+docker compose logs -f chat2api
+```
+
+服务启动后访问 `http://你的服务器:8080`。
+
+**自定义端口：**
+
+编辑 `docker-compose.yml` 中的 `ports` 部分：
+
+```yaml
+ports:
+  - "9000:8080"  # 将宿主机 9000 端口映射到容器 8080 端口
+```
+
+**环境变量配置（可选）：**
+
+在项目根目录创建 `.env` 文件：
+
+```env
+CHAT2API_MANAGEMENT_SECRET=你的管理密钥
+CHAT2API_ENCRYPTION_KEY=你的加密密钥
+```
+
+生成安全密钥：
+
+```bash
+openssl rand -hex 32
+```
+
+**数据持久化：** `docker-compose.yml` 使用命名卷（`chat2api-data`）映射到容器内的 `/data` 目录。所有配置、账户和日志在容器重启和重建后均不会丢失。
+
+**常用 Docker 命令：**
+
+```bash
+# 停止服务
+docker compose down
+
+# 拉取更新后重新构建
+git pull
+docker compose up -d --build
+
+# 查看实时日志
+docker compose logs -f chat2api
+
+# 重置数据（注意：会删除所有设置）
+docker compose down -v
+```
+
+**国内 Docker Hub 加速（如遇网络问题）：**
+
+如果构建时出现拉取镜像超时，配置国内镜像加速器：
+
+```bash
+sudo mkdir -p /etc/docker
+sudo tee /etc/docker/daemon.json <<'EOF'
+{
+  "registry-mirrors": [
+    "https://docker.1ms.run",
+    "https://docker.xuanyuan.me"
+  ]
+}
+EOF
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+```
+
+### 方式二：直接部署
+
+**环境要求：** Node.js 20+（推荐 LTS 22.x）、npm、Git
 
 ```bash
 # 克隆
@@ -94,27 +174,15 @@ pm2 save
 
 # 查看日志
 pm2 logs chat2api
+
+# 更新后重启
+git pull && npm ci && npm run build
+pm2 restart chat2api
 ```
-
-### 方式二：Docker 部署
-
-```bash
-# 构建并启动
-docker compose up -d --build
-
-# 查看日志
-docker compose logs -f chat2api
-```
-
-自定义端口：
-
-```bash
-PORT=9000 docker compose up -d --build
-```
-
-`docker-compose.yml` 使用命名卷（`chat2api-data`），数据在容器重启后不会丢失。
 
 ### 方式三：开发模式
+
+**环境要求：** Node.js 20+、npm
 
 ```bash
 npm ci
@@ -131,9 +199,11 @@ npm run dev
 | --- | --- | --- |
 | `PORT` | `8080` | 服务端口 |
 | `HOST` | `0.0.0.0` | 绑定地址 |
-| `CHAT2API_DATA_DIR` | `~/.chat2api` | 数据目录 |
-| `CHAT2API_MANAGEMENT_SECRET` | _（自动生成）_ | 固定管理 API 密钥 |
-| `CHAT2API_ENCRYPTION_KEY` | _（自动生成）_ | 固定凭证加密密钥 |
+| `CHAT2API_DATA_DIR` | `~/.chat2api` | 数据目录（Docker: `/data`） |
+| `CHAT2API_MANAGEMENT_SECRET` | _（自动生成）_ | 管理 API 密钥（建议固定） |
+| `CHAT2API_ENCRYPTION_KEY` | _（自动生成）_ | 凭证加密密钥（建议固定） |
+
+> **提示：** 生产环境中建议始终固定 `CHAT2API_MANAGEMENT_SECRET` 和 `CHAT2API_ENCRYPTION_KEY`，否则每次冷启动都会重新生成，导致现有会话和加密凭证失效。
 
 ## 🔧 使用方法
 
@@ -143,6 +213,15 @@ npm run dev
 4. 将 AI 客户端指向 `http://你的服务器:8080/v1`，填入 API Key
 
 支持 Cherry Studio、Chatbox、OpenCat、Cline、Roo-Code 或任何 OpenAI 兼容工具。
+
+## 🔄 v1.4.0 更新内容
+
+- **模型更新** — 所有供应商同步至最新上游模型（DeepSeek V4、GLM-5.1、Qwen3.6/3.7、MiniMax-M2.7 等）
+- **会话管理** — Qwen 和 Kimi 新增批量会话列表及删除功能
+- **DeepSeek 搜索增强** — 改进搜索结果合并、引用处理和语义模型检测
+- **Z.ai 验证码支持** — 新增 `captcha_verify_param` 凭证字段
+- **思考模式改进** — 所有供应商的思考/搜索/折叠模式检测优化
+- **浏览器指纹更新** — DeepSeek、Z.ai 更新至 Chrome 148 UA 和请求头
 
 ## 📄 许可证
 

@@ -31,7 +31,7 @@ interface DownloadProgress {
 
 export function About() {
   const { t } = useTranslation()
-  const [appVersion, setAppVersion] = useState<string>('1.3.0')
+  const [appVersion, setAppVersion] = useState<string>('1.4.0')
 
   useEffect(() => {
     if (window.electronAPI?.app?.getVersion) {

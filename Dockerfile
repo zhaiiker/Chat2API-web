@@ -11,7 +11,8 @@ COPY package.json package-lock.json* ./
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --no-audit --no-fund
 
-COPY tsconfig*.json vite.config.ts postcss.config.js tailwind.config.js components.json ./
+COPY tsconfig*.json vite.config.ts postcss.config.mjs tailwind.config.mjs components.json ./
+COPY sha3_wasm_bg.*.wasm ./
 COPY backend ./backend
 COPY frontend ./frontend
 COPY scripts ./scripts
@@ -36,6 +37,7 @@ RUN --mount=type=cache,target=/root/.npm \
     npm cache clean --force
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/sha3_wasm_bg.*.wasm ./
 
 # Persist user data (provider accounts, logs, encryption key) on a volume.
 RUN mkdir -p /data
