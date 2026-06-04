@@ -1136,7 +1136,7 @@ export class MiniMaxStreamHandler {
             const finishReason = this.toolCallState.hasEmittedToolCall ? 'tool_calls' : 'stop'
             transStream.write(
               `data: ${JSON.stringify({
-                id: this.chatId,
+                id: this.chatId || `minimax-${Date.now()}`,
                 model: this.model,
                 object: 'chat.completion.chunk',
                 choices: [{ index: 0, delta: {}, finish_reason: finishReason }],
@@ -1201,7 +1201,7 @@ export class MiniMaxStreamHandler {
               const finishReason = this.toolCallState.hasEmittedToolCall ? 'tool_calls' : 'stop'
               transStream.write(
                 `data: ${JSON.stringify({
-                  id: this.chatId,
+                  id: this.chatId || `minimax-${Date.now()}`,
                   model: this.model,
                   object: 'chat.completion.chunk',
                   choices: [{ index: 0, delta: {}, finish_reason: finishReason }],
@@ -1253,7 +1253,7 @@ export class MiniMaxStreamHandler {
             if (type === 8) {
               transStream.write(
                 `data: ${JSON.stringify({
-                  id: this.chatId,
+                  id: this.chatId || `minimax-${Date.now()}`,
                   model: this.model,
                   object: 'chat.completion.chunk',
                   choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
@@ -1296,7 +1296,7 @@ export class MiniMaxStreamHandler {
 
               transStream.write(
                 `data: ${JSON.stringify({
-                  id: this.chatId,
+                  id: this.chatId || `minimax-${Date.now()}`,
                   model: this.model,
                   object: 'chat.completion.chunk',
                   choices: [{ index: 0, delta: { content: chunk }, finish_reason: isEnd === 0 ? 'stop' : null }],

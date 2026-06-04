@@ -184,14 +184,19 @@ export class DeepSeekAdapter {
     )
 
     console.log('[DeepSeek] Create session completed, status:', result.status)
+    console.log('[DeepSeek] Create session response:', JSON.stringify(result.data, null, 2))
 
-    // Response structure: { code: 0, data: { biz_code: 0, biz_data: { id: "..." } } }
+    // Response structure: { code: 0, data: { biz_code: 0, biz_data: { chat_session: { id: "..." } } } }
+    // Or newer format: { code: 0, data: { biz_code: 0, biz_data: { id: "..." } } }
     const bizData = result.data?.data?.biz_data || result.data?.biz_data
-    if (result.status !== 200 || !bizData?.chat_session?.id) {
+    
+    // Try both old and new response formats
+    const sessionId = bizData?.chat_session?.id || bizData?.id
+    
+    if (result.status !== 200 || !sessionId) {
+      console.error('[DeepSeek] Create session failed, response:', JSON.stringify(result.data))
       throw new Error(`Failed to create session: ${result.data?.msg || result.data?.data?.biz_msg || result.status}`)
     }
-
-    const sessionId = bizData?.chat_session?.id
     sessionCache.set(cacheKey, { sessionId, createdAt: Date.now() })
 
     return sessionId

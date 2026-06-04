@@ -392,12 +392,15 @@ export class QwenAiStreamHandler {
     if (toolCalls && toolCalls.length > 0) {
       this.toolCallsSent = true
       
+      // Ensure we have a valid ID
+      const messageId = this.responseId || this.chatId || `qwen-ai-${Date.now()}`
+      
       // Send tool_calls delta
       for (let i = 0; i < toolCalls.length; i++) {
         const tc = toolCalls[i]
         transStream.write(
           `data: ${JSON.stringify({
-            id: this.responseId || this.chatId,
+            id: messageId,
             model: this.model,
             object: 'chat.completion.chunk',
             choices: [{
@@ -423,7 +426,7 @@ export class QwenAiStreamHandler {
       // Send finish with tool_calls
       transStream.write(
         `data: ${JSON.stringify({
-          id: this.responseId || this.chatId,
+          id: messageId,
           model: this.model,
           object: 'chat.completion.chunk',
           choices: [{ index: 0, delta: {}, finish_reason: 'tool_calls' }],
@@ -481,6 +484,9 @@ export class QwenAiStreamHandler {
             console.log('[QwenAI] Got response_id:', this.responseId)
           }
 
+          // Ensure we have a valid ID for all chunks
+          const messageId = this.responseId || this.chatId || `qwen-ai-${Date.now()}`
+
           if (data.choices && data.choices.length > 0) {
             const choice = data.choices[0]
             const delta = choice.delta || {}
@@ -497,7 +503,7 @@ export class QwenAiStreamHandler {
                 if (!hasSentReasoning) {
                   transStream.write(
                     `data: ${JSON.stringify({
-                      id: this.responseId || this.chatId,
+                      id: messageId,
                       model: this.model,
                       object: 'chat.completion.chunk',
                       choices: [{ index: 0, delta: { role: 'assistant', reasoning_content: '' }, finish_reason: null }],
@@ -510,7 +516,7 @@ export class QwenAiStreamHandler {
                 if (content) {
                   transStream.write(
                     `data: ${JSON.stringify({
-                      id: this.responseId || this.chatId,
+                      id: messageId,
                       model: this.model,
                       object: 'chat.completion.chunk',
                       choices: [{ index: 0, delta: { reasoning_content: content }, finish_reason: null }],
@@ -532,7 +538,7 @@ export class QwenAiStreamHandler {
                     if (!hasSentReasoning) {
                       transStream.write(
                         `data: ${JSON.stringify({
-                          id: this.responseId || this.chatId,
+                          id: messageId,
                           model: this.model,
                           object: 'chat.completion.chunk',
                           choices: [{ index: 0, delta: { role: 'assistant', reasoning_content: '' }, finish_reason: null }],
@@ -543,7 +549,7 @@ export class QwenAiStreamHandler {
                     }
                     transStream.write(
                       `data: ${JSON.stringify({
-                        id: this.responseId || this.chatId,
+                        id: messageId,
                         model: this.model,
                         object: 'chat.completion.chunk',
                         choices: [{ index: 0, delta: { reasoning_content: diff }, finish_reason: null }],
@@ -567,7 +573,7 @@ export class QwenAiStreamHandler {
               if (content) {
                 console.log('[QwenAI] Sending content chunk:', content)
                 const chunk = {
-                  id: this.responseId || this.chatId,
+                  id: messageId,
                   model: this.model,
                   object: 'chat.completion.chunk',
                   choices: [{ index: 0, delta: { content }, finish_reason: null }],
@@ -584,7 +590,7 @@ export class QwenAiStreamHandler {
               this.content += content
               
               const chunk = {
-                id: this.responseId || this.chatId,
+                id: messageId,
                 model: this.model,
                 object: 'chat.completion.chunk',
                 choices: [{ index: 0, delta: { content }, finish_reason: null }],
@@ -603,7 +609,7 @@ export class QwenAiStreamHandler {
               
               const finishReason = delta.finish_reason || 'stop'
               const finalChunk = {
-                id: this.responseId || this.chatId,
+                id: messageId,
                 model: this.model,
                 object: 'chat.completion.chunk',
                 choices: [{ index: 0, delta: {}, finish_reason: finishReason }],

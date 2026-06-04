@@ -167,8 +167,11 @@ export class DeepSeekStreamHandler {
   }
 
   private createChunk(delta: { role?: string; content?: string; reasoning_content?: string; tool_calls?: any[] }, finishReason?: string): string {
+    // Ensure messageId exists before creating chunk
+    const messageId = this.messageId || `msg_${Date.now()}`
+    
     return `data: ${JSON.stringify({
-      id: `${this.sessionId}@${this.messageId}`,
+      id: `${this.sessionId}@${messageId}`,
       model: this.model,
       object: 'chat.completion.chunk',
       choices: [{
@@ -187,9 +190,21 @@ export class DeepSeekStreamHandler {
     const isFoldModel = this.isFoldModel(isThinkingModel)
     const isSearchSilentModel = this.isSearchSilentModel()
 
+    console.log('[DeepSeek Stream] Starting stream processing')
+    console.log('[DeepSeek Stream] Model config:', {
+      model: this.model,
+      semanticModel: this.semanticModel,
+      isThinkingModel,
+      isSilentModel,
+      isFoldModel,
+      isSearchSilentModel,
+    })
+
     let buffer = ''
+    let chunkCount = 0
 
     stream.on('data', (chunk: Buffer) => {
+      chunkCount++
       buffer += chunk.toString()
       const lines = buffer.split('\n')
       buffer = lines.pop() || ''
@@ -199,22 +214,28 @@ export class DeepSeekStreamHandler {
 
         const data = line.slice(5).trim()
         if (data === '[DONE]') {
+          console.log(`[DeepSeek Stream] Received [DONE] signal after ${chunkCount} chunks`)
           this.handleDone(transStream, isFoldModel, isSearchSilentModel)
           return
         }
 
         const parsed = this.parseSSE(data)
-        if (!parsed) continue
+        if (!parsed) {
+          console.log('[DeepSeek Stream] Failed to parse SSE data:', data.substring(0, 100))
+          continue
+        }
 
         this.processChunk(parsed, transStream, isThinkingModel, isSilentModel, isFoldModel, isSearchSilentModel)
       }
     })
 
     stream.on('end', () => {
+      console.log(`[DeepSeek Stream] Stream ended after ${chunkCount} chunks`)
       this.handleDone(transStream, isFoldModel, isSearchSilentModel)
     })
 
     stream.on('error', (err) => {
+      console.error('[DeepSeek Stream] Stream error:', err)
       transStream.emit('error', err)
     })
 
@@ -229,8 +250,12 @@ export class DeepSeekStreamHandler {
     isFoldModel: boolean,
     isSearchSilentModel: boolean
   ): void {
+    // Set messageId from chunk or use sessionId as fallback
     if (chunk.response_message_id && !this.messageId) {
       this.messageId = chunk.response_message_id
+    } else if (!this.messageId) {
+      // Fallback: use a generated ID if no response_message_id is provided
+      this.messageId = `msg_${Date.now()}`
     }
 
     const previousPath = this.currentPath
@@ -344,6 +369,17 @@ export class DeepSeekStreamHandler {
     const processedContent = isSearchSilentModel
       ? filteredForSearch.replace(/\[citation:(\d+)\]/g, '')
       : filteredForSearch.replace(/\[citation:(\d+)\]/g, '[$1]')
+
+    // Debug log for first few chunks
+    if (this.isFirstChunk || !this.messageId) {
+      console.log('[DeepSeek Stream] sendContent called:', {
+        path,
+        contentLength: processedContent.length,
+        contentPreview: processedContent.substring(0, 50),
+        messageId: this.messageId,
+        isFirstChunk: this.isFirstChunk,
+      })
+    }
 
     // For 'content' path, intercept tool calls before text is streamed.
     if ((path === 'content' || path === '') && this.toolStreamParser) {

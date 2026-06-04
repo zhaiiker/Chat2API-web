@@ -603,12 +603,15 @@ export class ZaiStreamHandler {
     if (toolCalls && toolCalls.length > 0) {
       this.toolCallsSent = true
       
+      // Ensure we have a valid ID
+      const messageId = this.chatId || `zai-${Date.now()}`
+      
       // Send tool_calls delta
       for (let i = 0; i < toolCalls.length; i++) {
         const tc = toolCalls[i]
         transStream.write(
           `data: ${JSON.stringify({
-            id: this.chatId,
+            id: messageId,
             model: this.model,
             object: 'chat.completion.chunk',
             choices: [{
@@ -634,7 +637,7 @@ export class ZaiStreamHandler {
       // Send finish with tool_calls
       transStream.write(
         `data: ${JSON.stringify({
-          id: this.chatId,
+          id: messageId,
           model: this.model,
           object: 'chat.completion.chunk',
           choices: [{ index: 0, delta: {}, finish_reason: 'tool_calls' }],
@@ -682,6 +685,8 @@ export class ZaiStreamHandler {
           const result = data.data
           if (!result) return
 
+          const messageId = this.chatId || `zai-${Date.now()}`
+
           // Extract message ID from response for multi-turn support
           if (result.id && result.role === 'assistant' && !this.lastMessageId) {
             this.lastMessageId = result.id
@@ -695,7 +700,7 @@ export class ZaiStreamHandler {
             if (!this.sentThinkingRole) {
               transStream.write(
                 `data: ${JSON.stringify({
-                  id: this.chatId,
+                  id: messageId,
                   model: this.model,
                   object: 'chat.completion.chunk',
                   choices: [{ index: 0, delta: { role: 'assistant', reasoning_content: '' }, finish_reason: null }],
@@ -706,7 +711,7 @@ export class ZaiStreamHandler {
             }
             transStream.write(
               `data: ${JSON.stringify({
-                id: this.chatId,
+                id: messageId,
                 model: this.model,
                 object: 'chat.completion.chunk',
                 choices: [{ index: 0, delta: { reasoning_content: cleanedContent }, finish_reason: null }],
@@ -751,7 +756,7 @@ export class ZaiStreamHandler {
             
             transStream.write(
               `data: ${JSON.stringify({
-                id: this.chatId,
+                id: messageId,
                 model: this.model,
                 object: 'chat.completion.chunk',
                 choices: [{ index: 0, delta: {}, finish_reason: finishReason }],
@@ -772,7 +777,7 @@ export class ZaiStreamHandler {
             console.error('[Z.ai] Stream error:', error)
             transStream.write(
               `data: ${JSON.stringify({
-                id: this.chatId,
+                id: messageId,
                 model: this.model,
                 object: 'chat.completion.chunk',
                 choices: [{ index: 0, delta: { content: `\nError: ${error.detail || JSON.stringify(error)}` }, finish_reason: 'stop' }],
