@@ -46,17 +46,17 @@
 
 ## 🤖 Supported Providers
 
-| Provider | Auth Type | Models |
-| --- | --- | --- |
-| DeepSeek | User Token | deepseek-v4-pro, deepseek-v4-flash |
-| GLM | Refresh Token | GLM-5.1 |
-| Kimi | JWT Token | Kimi-K2.6 |
-| MiniMax | JWT Token | MiniMax-M2.7 |
-| Perplexity | Session Token | Auto (Free) |
-| Qwen (CN) | SSO Ticket | Qwen3.6, Qwen3.7-Max, Qwen3.5-Flash, Qwen3-Max, Qwen3-Coder |
-| Qwen AI (Global) | JWT Token | Qwen3.7-Max, Qwen3.6-Plus, Qwen3.6-35B-A3B, Qwen3.6-27B, Qwen3-Coder |
-| Z.ai | JWT Token | GLM-5.1, GLM-5-Turbo, GLM-5V-Turbo, GLM-5, GLM-4.7 |
-| Mimo | Service Token | MiMo models |
+| Provider | Auth Type | Models | Status |
+| --- | --- | --- | --- |
+| DeepSeek | User Token | deepseek-v4-pro, deepseek-v4-flash | Available |
+| GLM | Refresh Token | GLM-5.1 | Available |
+| Kimi | JWT Token | Kimi-K2.6 | Available |
+| MiniMax | JWT Token | MiniMax-M2.7 | Available |
+| Perplexity | Session Token | Auto (Free) | Available |
+| Qwen (CN) | SSO Ticket | Qwen3.6, Qwen3.7-Max, Qwen3.5-Flash, Qwen3-Max, Qwen3-Coder | Available |
+| Qwen AI (Global) | JWT Token | Qwen3.7-Max, Qwen3.6-Plus, Qwen3.6-35B-A3B, Qwen3.6-27B, Qwen3-Coder | Available |
+| Z.ai | JWT Token | GLM-5.1, GLM-5-Turbo, GLM-5V-Turbo, GLM-5, GLM-4.7 | Temporarily unavailable due to frontend captcha risk control |
+| Mimo | Service Token | MiMo models | Available |
 
 ## 📥 Installation
 

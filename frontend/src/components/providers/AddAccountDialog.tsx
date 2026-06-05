@@ -161,6 +161,13 @@ function mapOAuthCredentials(providerId: string | undefined, credentials: Record
         return result
       }
 
+      if (providerId === 'zai') {
+        const result: Record<string, string> = { [fieldName]: tokenValue }
+        const captchaVerifyParam = credentials.captcha_verify_param || credentials.captchaVerifyParam
+        if (captchaVerifyParam) result.captcha_verify_param = captchaVerifyParam
+        return result
+      }
+
       return { [fieldName]: tokenValue }
     }
   }
@@ -594,6 +601,11 @@ function CredentialFieldsForm({ fields, credentials, onChange, t, providerId }: 
           label: t('zai.token'),
           placeholder: t('zai.tokenPlaceholder'),
           helpText: t('zai.tokenHelp'),
+        },
+        captcha_verify_param: {
+          label: t('zai.captchaVerifyParam'),
+          placeholder: t('zai.captchaVerifyParamPlaceholder'),
+          helpText: t('zai.captchaVerifyParamHelp'),
         },
       },
       mimo: {

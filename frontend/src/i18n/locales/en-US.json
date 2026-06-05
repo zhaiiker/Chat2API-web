@@ -327,10 +327,13 @@
   },
   "zai": {
     "name": "Z.ai",
-    "description": "Z.ai - Free AI Chatbot powered by GLM-5 and GLM-4.7",
+    "description": "Z.ai is temporarily unavailable due to frontend captcha risk control",
     "token": "Access Token",
     "tokenPlaceholder": "Enter Z.ai JWT Token",
-    "tokenHelp": "Get the token from Z.ai web in browser DevTools Application -> Cookies. It is usually named token and starts with \"eyJ...\"."
+    "tokenHelp": "Z.ai is currently blocked in proxy mode by frontend captcha risk control. Copying token, HAR parameters, chat_id, or parent_message_id cannot reliably reuse browser-side verification state.",
+    "captchaVerifyParam": "Captcha Verify Param",
+    "captchaVerifyParamPlaceholder": "Debug only: captcha_verify_param from chat.z.ai HAR",
+    "captchaVerifyParamHelp": "Debug only. This short-lived field still cannot reliably bypass Z.ai frontend captcha risk control."
   },
   "mimo": {
     "name": "Mimo",

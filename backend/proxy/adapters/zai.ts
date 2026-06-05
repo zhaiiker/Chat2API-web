@@ -20,8 +20,8 @@ import {
 } from '../utils/streamToolHandler'
 
 const ZAI_API_BASE = 'https://chat.z.ai'
-const X_FE_VERSION = 'prod-fe-1.1.37'
-const ZAI_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'
+const X_FE_VERSION = 'prod-fe-1.1.42'
+const ZAI_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'
 
 const FAKE_HEADERS = {
   Accept: '*/*',
@@ -30,9 +30,9 @@ const FAKE_HEADERS = {
   'Cache-Control': 'no-cache',
   Origin: ZAI_API_BASE,
   Pragma: 'no-cache',
-  'Sec-Ch-Ua': '"Not/A)Brand";v="99", "Chromium";v="148"',
-  'Sec-Ch-Ua-Mobile': '?0',
-  'Sec-Ch-Ua-Platform': '"macOS"',
+    'Sec-Ch-Ua': '"Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"',
+    'Sec-Ch-Ua-Mobile': '?0',
+    'Sec-Ch-Ua-Platform': '"Windows"',
   'Sec-Fetch-Dest': 'empty',
   'Sec-Fetch-Mode': 'cors',
   'Sec-Fetch-Site': 'same-origin',
@@ -120,6 +120,11 @@ export class ZaiAdapter {
   private getToken(): string {
     const credentials = this.account.credentials
     return credentials.token || credentials.accessToken || credentials.jwt || ''
+  }
+
+  private getCaptchaVerifyParam(): string | undefined {
+    const credentials = this.account.credentials
+    return credentials.captcha_verify_param || credentials.captchaVerifyParam || undefined
   }
 
   private async ensureToken(): Promise<string> {
@@ -388,13 +393,22 @@ export class ZaiAdapter {
     }
     
     const signaturePrompt = this.extractLastUserMessage(processedMessages)
-    
-    // Always create a new chat (single-turn mode only)
-    const chatResult = await this.createChat(mappedModel, signaturePrompt)
-    const chatId = chatResult.chatId
-    const messageId = chatResult.messageId
-    const parentMessageId = null
-    console.log('[Z.ai] Created new chat:', chatId)
+    const chatId = request.chatId
+    const parentMessageId = request.parentMessageId || null
+
+    let messageId: string
+    if (chatId) {
+      messageId = uuid()
+      console.log('[Z.ai] Reusing existing chat:', chatId)
+    } else {
+      const chatResult = await this.createChat(mappedModel, signaturePrompt)
+      messageId = chatResult.messageId
+      console.log('[Z.ai] Created new chat:', chatResult.chatId)
+      request.chatId = chatResult.chatId
+    }
+
+    const finalChatId = request.chatId || chatId || ''
+    console.log('[Z.ai] Using chat:', finalChatId)
     
     const requestId = uuid()
     const timestamp = Date.now()
@@ -451,7 +465,7 @@ export class ZaiAdapter {
         '{{CURRENT_TIMEZONE}}': 'Asia/Shanghai',
         '{{USER_LANGUAGE}}': 'zh-CN',
       },
-      chat_id: chatId,
+      chat_id: finalChatId,
       id: requestId,
       current_user_message_id: messageId,
       current_user_message_parent_id: parentMessageId,
@@ -461,9 +475,14 @@ export class ZaiAdapter {
       },
     }
 
+    const captchaVerifyParam = this.getCaptchaVerifyParam()
+    if (captchaVerifyParam) {
+      requestBody.captcha_verify_param = captchaVerifyParam
+    }
+
     console.log('[Z.ai] Sending chat request...')
     console.log('[Z.ai] Model:', request.model)
-    console.log('[Z.ai] ChatId:', chatId)
+    console.log('[Z.ai] ChatId:', finalChatId)
     console.log('[Z.ai] MessageId (current_user_message_id):', messageId)
     console.log('[Z.ai] ParentMessageId:', parentMessageId || '(none)')
 
@@ -479,31 +498,31 @@ export class ZaiAdapter {
       languages: 'zh-CN,zh',
       timezone: 'Asia/Shanghai',
       cookie_enabled: 'true',
-      screen_width: '1512',
-      screen_height: '982',
-      screen_resolution: '1512x982',
-      viewport_height: '945',
-      viewport_width: '923',
-      viewport_size: '923x945',
-      color_depth: '30',
-      pixel_ratio: '2',
-      current_url: `${ZAI_API_BASE}/c/${chatId}`,
-      pathname: `/c/${chatId}`,
+      screen_width: '2560',
+      screen_height: '1440',
+      screen_resolution: '2560x1440',
+      viewport_height: '1305',
+      viewport_width: '907',
+      viewport_size: '907x1305',
+      color_depth: '32',
+      pixel_ratio: '1',
+      current_url: `${ZAI_API_BASE}/c/${finalChatId}`,
+      pathname: `/c/${finalChatId}`,
       search: '',
       hash: '',
       host: 'chat.z.ai',
       hostname: 'chat.z.ai',
       protocol: 'https:',
       referrer: '',
-      title: 'Z.ai - Free AI Chatbot & Agent powered by GLM-5 & GLM-4.7',
+      title: 'Z.ai - Free AI Chatbot & Agent powered by GLM-5.1 & GLM-5',
       timezone_offset: '-480',
       local_time: new Date().toISOString(),
       utc_time: new Date().toUTCString(),
       is_mobile: 'false',
       is_touch: 'false',
-      max_touch_points: '0',
+      max_touch_points: '10',
       browser_name: 'Chrome',
-      os_name: 'Mac OS',
+      os_name: 'Windows',
       signature_timestamp: String(timestamp),
     })
 
@@ -518,7 +537,7 @@ export class ZaiAdapter {
           'X-Signature': signature,
           'X-FE-Version': X_FE_VERSION,
           'Cookie': `token=${token}`,
-          Referer: `${ZAI_API_BASE}/c/${chatId}`,
+          Referer: `${ZAI_API_BASE}/c/${finalChatId}`,
           Priority: 'u=1, i',
         },
         responseType: 'stream',
@@ -548,7 +567,7 @@ export class ZaiAdapter {
       }
     }
 
-    return { response, chatId, requestId }
+    return { response, chatId: finalChatId, requestId }
   }
 
   static isZaiProvider(provider: Provider): boolean {

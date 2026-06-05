@@ -327,10 +327,13 @@
   },
   "zai": {
     "name": "Z.ai",
-    "description": "Z.ai - 免费AI聊天机器人，由 GLM-5 和 GLM-4.7 驱动",
+    "description": "Z.ai 当前受前端验证码风控限制，暂不可用",
     "token": "访问令牌",
     "tokenPlaceholder": "请输入 Z.ai JWT Token",
-    "tokenHelp": "从 Z.ai 网页版获取 token，可在浏览器开发者工具 Application -> Cookies 中找到，通常名为 token，并以 \"eyJ...\" 开头。"
+    "tokenHelp": "Z.ai 当前在代理模式下受前端验证码风控限制，复制 token、HAR 参数、chat_id 或 parent_message_id 也无法稳定复用浏览器校验状态。",
+    "captchaVerifyParam": "验证码校验参数",
+    "captchaVerifyParamPlaceholder": "仅用于调试：从 chat.z.ai HAR 中复制 captcha_verify_param",
+    "captchaVerifyParamHelp": "仅用于调试。该字段短时有效，实测仍无法稳定绕过 Z.ai 前端验证码风控。"
   },
   "mimo": {
     "name": "Mimo",
