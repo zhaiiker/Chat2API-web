@@ -71,6 +71,18 @@ router.post('/start', async (ctx: Context) => {
     const port = request.port
     const host = request.host
 
+    if (port !== undefined && (typeof port !== 'number' || !Number.isInteger(port) || port < 1024 || port > 65535)) {
+      ctx.status = 400
+      ctx.body = createErrorResponse('invalid_port', 'Port must be an integer between 1024 and 65535')
+      return
+    }
+
+    if (host !== undefined && (typeof host !== 'string' || !/^[a-zA-Z0-9.:]+$/.test(host))) {
+      ctx.status = 400
+      ctx.body = createErrorResponse('invalid_host', 'Host must be a valid hostname or IP address')
+      return
+    }
+
     const success = await proxyServer.start(port, host)
 
     if (!success) {
@@ -126,6 +138,18 @@ router.post('/restart', async (ctx: Context) => {
     const request = (ctx.request.body as ProxyRestartRequest) || {}
     const port = request.port
     const host = request.host
+
+    if (port !== undefined && (typeof port !== 'number' || !Number.isInteger(port) || port < 1024 || port > 65535)) {
+      ctx.status = 400
+      ctx.body = createErrorResponse('invalid_port', 'Port must be an integer between 1024 and 65535')
+      return
+    }
+
+    if (host !== undefined && (typeof host !== 'string' || !/^[a-zA-Z0-9.:]+$/.test(host))) {
+      ctx.status = 400
+      ctx.body = createErrorResponse('invalid_host', 'Host must be a valid hostname or IP address')
+      return
+    }
 
     const success = await proxyServer.restart(port, host)
 

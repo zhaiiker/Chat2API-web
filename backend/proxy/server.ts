@@ -7,6 +7,7 @@ import Koa, { type Context, type Next } from 'koa'
 import Router from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import { Server as HttpServer } from 'http'
+import * as crypto from 'crypto'
 import * as fs from 'fs'
 import * as path from 'path'
 import routes from './routes'
@@ -14,7 +15,7 @@ import managementRoutes from './routes/management'
 import { proxyStatusManager } from './status'
 import { storeManager } from '../store/store'
 import { sessionManager } from './sessionManager'
-import { isPublicManagementPath } from './middleware/managementAuth'
+import { isPublicManagementPath, managementAuthMiddleware } from './middleware/managementAuth'
 
 const SLOW_REQUEST_THRESHOLD_MS = 1500
 
@@ -140,7 +141,7 @@ export class ProxyServer {
     // API Key validation middleware
     this.app.use(async (ctx, next) => {
       // Skip paths that don't require authentication
-      const publicPaths = ['/', '/health', '/stats']
+      const publicPaths = ['/', '/health']
       if (publicPaths.includes(ctx.path)) {
         await next()
         return
@@ -186,7 +187,8 @@ export class ProxyServer {
         }
         
         const validKey = config.apiKeys.find(
-          k => k.key === providedKey && k.enabled
+          k => k.enabled && k.key.length === providedKey.length &&
+               crypto.timingSafeEqual(Buffer.from(k.key), Buffer.from(providedKey))
         )
         
         if (!validKey) {
@@ -277,22 +279,12 @@ export class ProxyServer {
     })
 
     this.router.get('/health', async (ctx) => {
-      const status = proxyStatusManager.getRunningStatus()
-      const statistics = proxyStatusManager.getStatistics()
-
       ctx.body = {
-        status: status.isRunning ? 'running' : 'stopped',
-        uptime: status.uptime,
-        statistics: {
-          totalRequests: statistics.totalRequests,
-          successRequests: statistics.successRequests,
-          failedRequests: statistics.failedRequests,
-          activeConnections: statistics.activeConnections,
-        },
+        status: proxyStatusManager.getRunningStatus().isRunning ? 'ok' : 'degraded',
       }
     })
 
-    this.router.get('/stats', async (ctx) => {
+    this.router.get('/stats', managementAuthMiddleware, async (ctx) => {
       const statistics = proxyStatusManager.getStatistics()
       ctx.body = statistics
     })
