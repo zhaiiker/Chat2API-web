@@ -160,6 +160,27 @@ PORT=8080 node dist/backend/index.js
 
 浏览器打开 `http://你的服务器:8080`，首次访问时设置管理员密码。
 
+### 方式二：bin直接部署
+拷贝zip 
+chat2api-frontend-dist.zip
+chat2api-web-linux-x64.zip
+到服务器目录例如/etc/app/chat2api
+解压chat2api-web-linux-x64.zip二进制文件放在/etc/app/chat2api
+创建目录 mkdir -p /etc/app/chat2api/dist/frontend
+解压chat2api-frontend-dist.zip 全部文件放在新建的目录
+
+结构如下
+```
+/etc/app/
+└── chat2api/
+    ├── chat2api-web         <-- 你的二进制执行文件
+    └── dist/
+        └── frontend/        <-- 把解压出来的网页文件丢进这里
+            ├── index.html
+            ├── assets/
+            └── ...
+```
+然后直接启动./chat2api-web
 **使用 PM2 保活（生产推荐）：**
 
 ```bash
