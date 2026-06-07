@@ -37,7 +37,10 @@ RUN --mount=type=cache,target=/root/.npm \
     npm cache clean --force
 
 COPY --from=builder /app/dist ./dist
+# DeepSeek challenge code resolves the WASM file from dist/backend/lib in
+# production, so keep a copy there as well as at the app root for compatibility.
 COPY --from=builder /app/sha3_wasm_bg.*.wasm ./
+COPY --from=builder /app/sha3_wasm_bg.*.wasm ./dist/backend/lib/
 
 # Persist user data (provider accounts, logs, encryption key) on a volume.
 RUN mkdir -p /data
