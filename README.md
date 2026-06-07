@@ -210,6 +210,10 @@ Works with Cherry Studio, Chatbox, OpenCat, Cline, Roo-Code, or any OpenAI-compa
 - **Thinking Mode Improvements** — Better thinking/search/fold mode detection across all providers
 - **Updated Browser Fingerprints** — Chrome 148 UA and headers for DeepSeek, Z.ai
 
+## 友情链接
+
+- [LINUX DO](https://linux.do/) —— 新的理想型社区，技术爱好者的聚集地。
+
 ## 📄 License
 
 [GPL-3.0](LICENSE)

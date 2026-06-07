@@ -242,7 +242,11 @@ npm run dev
 - **DeepSeek 搜索增强** — 改进搜索结果合并、引用处理和语义模型检测
 - **Z.ai 验证码支持** — 新增 `captcha_verify_param` 凭证字段
 - **思考模式改进** — 所有供应商的思考/搜索/折叠模式检测优化
-- **浏览器指纹更新** — DeepSeek、Z.ai 更新至 Chrome 148 UA 和请求头
+- **浏览器指纹更新** — DeepSeek、Z.ai 更新至 Chrome 148 UA 和请求头.
+
+## 友情链接
+
+- [LINUX DO](https://linux.do/) —— 新的理想型社区，技术爱好者的聚集地。
 
 ## 📄 许可证
 
