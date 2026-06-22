@@ -191,9 +191,16 @@ router.post('/completions', async (ctx: Context) => {
           if (result.status === 429) {
             loadBalancer.markAccountRateLimited(account.id)
             console.log(`[Sequential] Account ${account.name} rate limited (429), switching...`)
+          } else if (lastError && lastError.includes('DeepSeek account banned')) {
+            loadBalancer.markAccountBanned(account.id, 24 * 60 * 60 * 1000) // Ban for 24 hours
+            console.log(`[Sequential] Account ${account.name} banned by feature monitoring, disabled for 24h, switching...`)
           } else if (result.status && result.status >= 400) {
             loadBalancer.markAccountFailed(account.id)
             console.log(`[Sequential] Account ${account.name} failed (${result.status}), switching...`)
+          } else {
+            // Mark failed for network errors or other internal errors
+            loadBalancer.markAccountFailed(account.id)
+            console.log(`[Sequential] Account ${account.name} failed (${lastError}), switching...`)
           }
 
           proxyStatusManager.recordRequestFailure(latency)
@@ -413,7 +420,12 @@ router.post('/completions', async (ctx: Context) => {
         lastError = error instanceof Error ? error.message : 'Unknown error'
         lastStatus = 500
 
-        loadBalancer.markAccountFailed(account.id)
+        if (lastError.includes('DeepSeek account banned')) {
+          loadBalancer.markAccountBanned(account.id, 24 * 60 * 60 * 1000) // Ban for 24 hours
+        } else {
+          loadBalancer.markAccountFailed(account.id)
+        }
+        
         proxyStatusManager.recordRequestFailure(latency)
 
         storeManager.addLog('error', `[Sequential] Account ${account.name} exception (attempt ${switchAttempt + 1}): ${lastError}`, {
@@ -524,7 +536,9 @@ router.post('/completions', async (ctx: Context) => {
     if (!result.success) {
       proxyStatusManager.recordRequestFailure(latency)
 
-      if (result.status && result.status >= 400 && result.status !== 429) {
+      if (result.error && result.error.includes('DeepSeek account banned')) {
+        loadBalancer.markAccountBanned(account.id, 24 * 60 * 60 * 1000)
+      } else if (result.status && result.status >= 400 && result.status !== 429) {
         loadBalancer.markAccountFailed(account.id)
       }
 

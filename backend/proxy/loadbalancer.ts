@@ -12,7 +12,7 @@ import { storeManager } from '../store/store'
  */
 export class LoadBalancer {
   private roundRobinIndex: Map<string, number> = new Map()
-  private failedAccounts: Map<string, { count: number; lastFailTime: number }> = new Map()
+  private failedAccounts: Map<string, { count: number; lastFailTime: number; recoveryTime?: number }> = new Map()
   private stickyAccount: Map<string, string> = new Map()
   private static readonly FAIL_THRESHOLD = 3
   private static readonly RECOVERY_TIME = 60000 // 1 minute
@@ -41,6 +41,18 @@ export class LoadBalancer {
   }
 
   /**
+   * Mark account as banned for a specific duration - triggers immediately
+   */
+  markAccountBanned(accountId: string, recoveryTimeMs: number): void {
+    this.failedAccounts.set(accountId, {
+      count: LoadBalancer.FAIL_THRESHOLD, // Immediately mark as failed
+      lastFailTime: Date.now(),
+      recoveryTime: recoveryTimeMs,
+    })
+    console.log(`[LoadBalancer] Account ${accountId} marked as banned for ${recoveryTimeMs / 1000}s`)
+  }
+
+  /**
    * Clear account failure status
    */
   clearAccountFailure(accountId: string): void {
@@ -54,7 +66,8 @@ export class LoadBalancer {
     const failure = this.failedAccounts.get(accountId)
     if (!failure) return false
 
-    if (Date.now() - failure.lastFailTime > LoadBalancer.RECOVERY_TIME) {
+    const recoveryTime = failure.recoveryTime || LoadBalancer.RECOVERY_TIME
+    if (Date.now() - failure.lastFailTime > recoveryTime) {
       this.failedAccounts.delete(accountId)
       return false
     }
