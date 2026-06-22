@@ -229,7 +229,8 @@ export class RequestForwarder {
   ): Promise<ForwardResult> {
     const startTime = Date.now()
     const config = storeManager.getConfig()
-    const maxRetries = config.retryCount
+    // Sequential strategy delegates retry to chat route for account switching
+    const maxRetries = config.loadBalanceStrategy === 'sequential' ? 0 : config.retryCount
 
     let lastError: string | undefined
 
@@ -469,12 +470,43 @@ export class RequestForwarder {
       
       if (request.stream) {
         const transformedStream = await handler.handleStream(response.data)
-        
+
+        // Wrap stream to detect ban signature: if stream ends with no content emitted,
+        // destroy with a ban error so Sequential strategy can switch accounts transparently.
+        const banWatchStream = new PassThrough()
+        let streamHasContent = false
+
+        transformedStream.on('data', (chunk: Buffer) => {
+          const str = chunk.toString()
+          // Any SSE chunk with non-empty delta content counts as real content
+          if (!streamHasContent && str.includes('"content":"') && !str.includes('"content":""')) {
+            streamHasContent = true
+          }
+          banWatchStream.write(chunk)
+        })
+
+        transformedStream.once('error', (err) => banWatchStream.destroy(err))
+
+        transformedStream.once('end', () => {
+          if (!streamHasContent) {
+            console.warn('[DeepSeek] Stream ban detected: stream ended with no content — triggering account switch')
+            storeManager.addLog('warn', '[DeepSeek] Stream ban detected: empty content signature, triggering account switch', {
+              providerId: provider.id,
+              accountId: account.id,
+              model: request.model,
+            })
+            // Destroy the wrapper stream with a ban error so the upstream handler can retry
+            banWatchStream.destroy(new Error('DeepSeek account banned: feature monitoring detected (empty stream)'))
+            return
+          }
+          banWatchStream.end()
+        })
+
         return {
           success: true,
           status: response.status,
           headers: this.extractHeaders(response.headers),
-          stream: transformedStream,
+          stream: banWatchStream,
           skipTransform: true,
           latency,
           providerSessionId: sessionId,
@@ -483,9 +515,25 @@ export class RequestForwarder {
 
       // Non-streaming requests need to collect stream data and convert
       const result = await handler.handleNonStream(response.data)
-      
+
+      // Detect ban signature: id ends with '@' (no message ID), empty content, and token usage = 2
+      // DeepSeek returns HTTP 200 with empty stream when an account is feature-monitor banned.
+      const resultId: string = result?.id ?? ''
+      const resultContent = result?.choices?.[0]?.message?.content
+      const resultTotalTokens: number = result?.usage?.total_tokens ?? 0
+      if (resultId.endsWith('@') && resultContent === '' && resultTotalTokens === 2) {
+        console.warn('[DeepSeek] Non-stream ban detected: empty content signature — triggering account switch')
+        storeManager.addLog('warn', '[DeepSeek] Non-stream ban detected: empty content + no message ID + total_tokens=2', {
+          providerId: provider.id,
+          accountId: account.id,
+          model: request.model,
+          data: { resultId },
+        })
+        throw new Error('DeepSeek account banned: feature monitoring detected (empty content signature)')
+      }
+
       this.applyToolCallsToResponse(result, transformed)
-      
+
       if (deleteSessionCallback) {
         await deleteSessionCallback()
       }

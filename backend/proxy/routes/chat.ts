@@ -126,6 +126,367 @@ router.post('/completions', async (ctx: Context) => {
   const preferredProviderId = modelMapper.getPreferredProvider(request.model)
   const preferredAccountId = modelMapper.getPreferredAccount(request.model)
 
+  // Sequential strategy: transparent retry with account switching
+  if (config.loadBalanceStrategy === 'sequential') {
+    const maxSwitchAttempts = 3
+    let lastError: string | undefined
+    let lastStatus: number | undefined
+
+    for (let switchAttempt = 0; switchAttempt < maxSwitchAttempts; switchAttempt++) {
+      const selection = loadBalancer.selectAccount(
+        request.model,
+        'sequential',
+        preferredProviderId,
+        preferredAccountId
+      )
+
+      if (!selection) {
+        ctx.status = 503
+        ctx.body = {
+          error: {
+            message: `No available account for model: ${request.model}`,
+            type: 'service_unavailable_error',
+            param: null,
+            code: 'no_available_account',
+          },
+        }
+        return
+      }
+
+      const { account, provider, actualModel } = selection
+
+      if (switchAttempt > 0) {
+        console.log(`[Sequential] Retry attempt ${switchAttempt + 1}/${maxSwitchAttempts} with account ${account.name}`)
+      }
+
+      const context: ProxyContext = {
+        requestId,
+        providerId: provider.id,
+        accountId: account.id,
+        model: request.model,
+        actualModel,
+        startTime,
+        isStream: request.stream || false,
+        clientIP,
+      }
+
+      proxyStatusManager.recordRequestStart(request.model, provider.id, account.id)
+
+      try {
+        const result = await requestForwarder.forwardChatCompletion(
+          request,
+          account,
+          provider,
+          actualModel,
+          context
+        )
+
+        const latency = Date.now() - startTime
+
+        if (!result.success) {
+          lastError = result.error
+          lastStatus = result.status
+
+          // Mark account based on error type
+          if (result.status === 429) {
+            loadBalancer.markAccountRateLimited(account.id)
+            console.log(`[Sequential] Account ${account.name} rate limited (429), switching...`)
+          } else if (lastError && lastError.includes('DeepSeek account banned')) {
+            loadBalancer.markAccountBanned(account.id, 24 * 60 * 60 * 1000) // Ban for 24 hours
+            console.log(`[Sequential] Account ${account.name} banned by feature monitoring, disabled for 24h, switching...`)
+          } else if (result.status && result.status >= 400) {
+            loadBalancer.markAccountFailed(account.id)
+            console.log(`[Sequential] Account ${account.name} failed (${result.status}), switching...`)
+          } else {
+            // Mark failed for network errors or other internal errors
+            loadBalancer.markAccountFailed(account.id)
+            console.log(`[Sequential] Account ${account.name} failed (${lastError}), switching...`)
+          }
+
+          proxyStatusManager.recordRequestFailure(latency)
+
+          storeManager.addLog('warn', `[Sequential] Account ${account.name} failed (attempt ${switchAttempt + 1}): ${result.error}`, {
+            requestId,
+            providerId: provider.id,
+            accountId: account.id,
+            model: request.model,
+            latency,
+          })
+
+          // Continue to next attempt (don't return error to client yet)
+          continue
+        }
+
+        // Success! Handle normally
+        loadBalancer.clearAccountFailure(account.id)
+        proxyStatusManager.recordRequestSuccess(latency)
+
+        storeManager.updateAccount(account.id, {
+          lastUsed: Date.now(),
+          requestCount: (account.requestCount || 0) + 1,
+          todayUsed: (account.todayUsed || 0) + 1,
+        })
+
+        if (switchAttempt > 0) {
+          storeManager.addLog('info', `[Sequential] Request succeeded after ${switchAttempt + 1} account switches`, {
+            requestId,
+            providerId: provider.id,
+            accountId: account.id,
+            model: request.model,
+            latency,
+          })
+        }
+
+        storeManager.addLog('debug', `Request succeeded`, {
+          requestId,
+          providerId: provider.id,
+          accountId: account.id,
+          model: request.model,
+          actualModel,
+          latency,
+          isStream: request.stream,
+        })
+
+        const userInput = extractUserInput(request.messages)
+        const responseBodyForLog = !request.stream && result.body
+          ? JSON.stringify(result.body)
+          : undefined
+
+        const requestBodyForLog = JSON.stringify(request)
+
+        let logEntryId: string | undefined
+
+        if (!request.stream) {
+          const logEntry = storeManager.addRequestLog({
+            timestamp: startTime,
+            status: 'success',
+            statusCode: 200,
+            method: 'POST',
+            url: '/v1/chat/completions',
+            model: request.model,
+            actualModel,
+            providerId: provider.id,
+            providerName: provider.name,
+            accountId: account.id,
+            accountName: account.name,
+            requestBody: requestBodyForLog,
+            userInput,
+            webSearch: request.web_search,
+            reasoningEffort: request.reasoning_effort,
+            responseStatus: 200,
+            responseBody: responseBodyForLog,
+            latency,
+            isStream: false,
+          })
+          logEntryId = logEntry.id
+        } else {
+          const logEntry = storeManager.addRequestLog({
+            timestamp: startTime,
+            status: 'success',
+            statusCode: 200,
+            method: 'POST',
+            url: '/v1/chat/completions',
+            model: request.model,
+            actualModel,
+            providerId: provider.id,
+            providerName: provider.name,
+            accountId: account.id,
+            accountName: account.name,
+            requestBody: requestBodyForLog,
+            userInput,
+            webSearch: request.web_search,
+            reasoningEffort: request.reasoning_effort,
+            responseStatus: 200,
+            latency,
+            isStream: true,
+          })
+          logEntryId = logEntry.id
+        }
+
+        storeManager.recordRequestInStats(true, latency, request.model, provider.id, account.id)
+
+        if (request.stream === true && result.stream) {
+          ctx.set('Content-Type', 'text/event-stream')
+          ctx.set('Cache-Control', 'no-cache')
+          ctx.set('Connection', 'keep-alive')
+          ctx.set('X-Accel-Buffering', 'no')
+
+          const wrapperStream = new PassThrough()
+          let collectedContent = ''
+
+          // Ban-aware stream error handler.
+          // When DeepSeek bans an account it returns an empty stream (no content);
+          // the banWatchStream is destroyed with a ban-marker error before any content
+          // is written to wrapperStream.  In that case we close wrapperStream cleanly
+          // (no SSE error chunk) and log the event.  All other errors still emit an
+          // SSE error chunk so the client knows something went wrong.
+          result.stream.once('error', (err: Error) => {
+            const isBanError = err.message.includes('DeepSeek account banned')
+            if (isBanError) {
+              console.warn('[Chat/Sequential] Stream ban detected — closing cleanly without error chunk')
+              storeManager.addLog('warn', `[Sequential] DeepSeek stream ban on account ${account.name} — no retry possible for in-flight stream`, {
+                requestId,
+                providerId: provider.id,
+                accountId: account.id,
+                model: request.model,
+              })
+              wrapperStream.write('data: [DONE]\n\n')
+              wrapperStream.end()
+              return
+            }
+            console.error('[Chat] Stream error:', err.message)
+            const errorEvent = {
+              id: requestId,
+              object: 'chat.completion.chunk',
+              created: Math.floor(Date.now() / 1000),
+              model: actualModel,
+              choices: [{
+                index: 0,
+                delta: {
+                  content: `\n\n[Error: ${err.message}]`,
+                },
+                finish_reason: 'stop',
+              }],
+            }
+            wrapperStream.write(`data: ${JSON.stringify(errorEvent)}\n\n`)
+            wrapperStream.write('data: [DONE]\n\n')
+            wrapperStream.end()
+          })
+
+          if (result.skipTransform) {
+            result.stream.on('data', (chunk: Buffer) => {
+              collectedContent += chunk.toString()
+            })
+            result.stream.pipe(wrapperStream, { end: false })
+            result.stream.once('end', () => {
+              if (logEntryId) {
+                storeManager.updateRequestLog(logEntryId, {
+                  responseBody: collectedContent || undefined,
+                })
+              }
+              wrapperStream.end()
+            })
+          } else {
+            const transformStream = streamHandler.createTransformStream(
+              actualModel,
+              requestId,
+              () => {
+                storeManager.addLog('debug', `Stream response completed`, { requestId })
+              }
+            )
+            transformStream.on('data', (chunk: Buffer) => {
+              collectedContent += chunk.toString()
+            })
+            result.stream.pipe(transformStream)
+            transformStream.pipe(wrapperStream, { end: false })
+            transformStream.once('end', () => {
+              if (logEntryId) {
+                storeManager.updateRequestLog(logEntryId, {
+                  responseBody: collectedContent || undefined,
+                })
+              }
+              wrapperStream.end()
+            })
+          }
+
+          ctx.body = wrapperStream
+        } else {
+          ctx.set('Content-Type', 'application/json')
+          if (result.body) {
+            if (isAnthropicToolFormat(request.tool_format)) {
+              ctx.body = transformResponseToAnthropic(result.body)
+            } else {
+              ctx.body = result.body
+            }
+          } else {
+            ctx.body = {
+              id: requestId,
+              object: 'chat.completion',
+              created: Math.floor(Date.now() / 1000),
+              model: actualModel,
+              choices: [{
+                index: 0,
+                message: { role: 'assistant', content: '' },
+                finish_reason: 'stop',
+              }],
+              usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+            }
+          }
+        }
+
+        return // Success, exit the retry loop
+      } catch (error) {
+        const latency = Date.now() - startTime
+        lastError = error instanceof Error ? error.message : 'Unknown error'
+        lastStatus = 500
+
+        if (lastError.includes('DeepSeek account banned')) {
+          loadBalancer.markAccountBanned(account.id, 24 * 60 * 60 * 1000) // Ban for 24 hours
+        } else {
+          loadBalancer.markAccountFailed(account.id)
+        }
+        
+        proxyStatusManager.recordRequestFailure(latency)
+
+        storeManager.addLog('error', `[Sequential] Account ${account.name} exception (attempt ${switchAttempt + 1}): ${lastError}`, {
+          requestId,
+          providerId: provider.id,
+          accountId: account.id,
+          model: request.model,
+          latency,
+        })
+
+        // Continue to next attempt
+        continue
+      }
+    }
+
+    // All attempts exhausted, return error to client
+    const latency = Date.now() - startTime
+    ctx.status = lastStatus || 503
+    ctx.body = {
+      error: {
+        message: lastError || 'All accounts exhausted after sequential switching',
+        type: 'api_error',
+        param: null,
+        code: 'sequential_exhausted',
+      },
+    }
+
+    storeManager.addLog('error', `[Sequential] All ${maxSwitchAttempts} accounts exhausted: ${lastError}`, {
+      requestId,
+      model: request.model,
+      latency,
+    })
+
+    storeManager.addRequestLog({
+      timestamp: startTime,
+      status: 'error',
+      statusCode: lastStatus || 503,
+      method: 'POST',
+      url: '/v1/chat/completions',
+      model: request.model,
+      actualModel: request.model,
+      providerId: '',
+      providerName: 'sequential',
+      accountId: '',
+      accountName: 'exhausted',
+      requestBody: JSON.stringify(request),
+      userInput: extractUserInput(request.messages),
+      webSearch: request.web_search,
+      reasoningEffort: request.reasoning_effort,
+      responseStatus: lastStatus || 503,
+      responseBody: JSON.stringify({ error: { message: lastError } }),
+      latency,
+      isStream: request.stream || false,
+      errorMessage: lastError,
+    })
+
+    storeManager.recordRequestInStats(false, latency, request.model, '', '')
+    return
+  }
+
+  // Non-sequential strategies: original logic
   const selection = loadBalancer.selectAccount(
     request.model,
     config.loadBalanceStrategy,
@@ -175,7 +536,9 @@ router.post('/completions', async (ctx: Context) => {
     if (!result.success) {
       proxyStatusManager.recordRequestFailure(latency)
 
-      if (result.status && result.status >= 400 && result.status !== 429) {
+      if (result.error && result.error.includes('DeepSeek account banned')) {
+        loadBalancer.markAccountBanned(account.id, 24 * 60 * 60 * 1000)
+      } else if (result.status && result.status >= 400 && result.status !== 429) {
         loadBalancer.markAccountFailed(account.id)
       }
 
@@ -329,8 +692,22 @@ router.post('/completions', async (ctx: Context) => {
       // Collect stream content for logging (raw SSE output)
       let collectedContent = ''
 
-      // Handle stream errors
+      // Handle stream errors — distinguish ban errors (clean close) from real errors (SSE error chunk)
       result.stream.once('error', (err: Error) => {
+        const isBanError = err.message.includes('DeepSeek account banned')
+        if (isBanError) {
+          console.warn('[Chat] Stream ban detected — closing cleanly without error chunk')
+          storeManager.addLog('warn', `[DeepSeek] Stream ban on account ${account.name} — closing stream cleanly`, {
+            requestId,
+            providerId: provider.id,
+            accountId: account.id,
+            model: request.model,
+          })
+          wrapperStream.write('data: [DONE]\n\n')
+          wrapperStream.end()
+          return
+        }
+
         console.error('[Chat] Stream error:', err.message)
 
         // Send error as SSE event

@@ -12,9 +12,11 @@ import { storeManager } from '../store/store'
  */
 export class LoadBalancer {
   private roundRobinIndex: Map<string, number> = new Map()
-  private failedAccounts: Map<string, { count: number; lastFailTime: number }> = new Map()
+  private failedAccounts: Map<string, { count: number; lastFailTime: number; recoveryTime?: number }> = new Map()
+  private stickyAccount: Map<string, string> = new Map()
   private static readonly FAIL_THRESHOLD = 3
   private static readonly RECOVERY_TIME = 60000 // 1 minute
+  private static readonly RATE_LIMIT_RECOVERY_TIME = 60000 // 1 minute for rate-limited accounts
 
   /**
    * Mark account as failed
@@ -25,6 +27,29 @@ export class LoadBalancer {
       count: current.count + 1,
       lastFailTime: Date.now(),
     })
+  }
+
+  /**
+   * Mark account as rate limited (429) - triggers immediately with 1 occurrence
+   */
+  markAccountRateLimited(accountId: string): void {
+    this.failedAccounts.set(accountId, {
+      count: LoadBalancer.FAIL_THRESHOLD, // Immediately mark as failed
+      lastFailTime: Date.now(),
+    })
+    console.log(`[LoadBalancer] Account ${accountId} marked as rate limited`)
+  }
+
+  /**
+   * Mark account as banned for a specific duration - triggers immediately
+   */
+  markAccountBanned(accountId: string, recoveryTimeMs: number): void {
+    this.failedAccounts.set(accountId, {
+      count: LoadBalancer.FAIL_THRESHOLD, // Immediately mark as failed
+      lastFailTime: Date.now(),
+      recoveryTime: recoveryTimeMs,
+    })
+    console.log(`[LoadBalancer] Account ${accountId} marked as banned for ${recoveryTimeMs / 1000}s`)
   }
 
   /**
@@ -41,7 +66,8 @@ export class LoadBalancer {
     const failure = this.failedAccounts.get(accountId)
     if (!failure) return false
 
-    if (Date.now() - failure.lastFailTime > LoadBalancer.RECOVERY_TIME) {
+    const recoveryTime = failure.recoveryTime || LoadBalancer.RECOVERY_TIME
+    if (Date.now() - failure.lastFailTime > recoveryTime) {
       this.failedAccounts.delete(accountId)
       return false
     }
@@ -81,6 +107,10 @@ export class LoadBalancer {
 
     if (strategy === 'failover') {
       return this.selectFailover(candidates)
+    }
+
+    if (strategy === 'sequential') {
+      return this.selectSequential(candidates)
     }
 
     return this.selectRoundRobin(candidates)
@@ -300,6 +330,36 @@ export class LoadBalancer {
     })
 
     return sortedCandidates[0]
+  }
+
+  /**
+   * Sequential strategy
+   * Stick to one account until it fails or hits rate limit, then switch to next
+   */
+  private selectSequential(candidates: AccountSelection[]): AccountSelection {
+    const providerIds = [...new Set(candidates.map(c => c.provider.id))]
+    const key = providerIds.join(',')
+
+    const stickyId = this.stickyAccount.get(key)
+
+    if (stickyId) {
+      const sticky = candidates.find(
+        c => c.account.id === stickyId && !this.isAccountInFailure(stickyId)
+      )
+      if (sticky) {
+        return sticky
+      }
+      // Sticky account is in failure, find next healthy one
+      console.log(`[LoadBalancer] Sequential: sticky account ${stickyId} is unavailable, switching...`)
+    }
+
+    // Find first healthy candidate
+    const healthy = candidates.find(c => !this.isAccountInFailure(c.account.id))
+    const selected = healthy || candidates[0]
+
+    this.stickyAccount.set(key, selected.account.id)
+    console.log(`[LoadBalancer] Sequential: selected account ${selected.account.name} (${selected.account.id})`)
+    return selected
   }
 
   /**

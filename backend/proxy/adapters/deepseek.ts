@@ -15,25 +15,90 @@ import { extractMessageText } from '../utils/messageContent'
 
 const DEEPSEEK_API_BASE = 'https://chat.deepseek.com/api'
 
-const FAKE_HEADERS = {
+/**
+ * Browser fingerprint pool.
+ * Each profile groups the headers that must be internally consistent:
+ *   User-Agent, Sec-Ch-Ua, Sec-Ch-Ua-Platform, Accept-Language.
+ * A profile is chosen once per DeepSeekAdapter instance so all requests
+ * from the same logical "session" share the same fingerprint.
+ */
+interface BrowserProfile {
+  'User-Agent': string
+  'Sec-Ch-Ua': string
+  'Sec-Ch-Ua-Platform': string
+  'Accept-Language': string
+}
+
+const BROWSER_PROFILES: BrowserProfile[] = [
+  // macOS Chrome 136
+  {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+    'Sec-Ch-Ua': '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"',
+    'Sec-Ch-Ua-Platform': '"macOS"',
+    'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+  },
+  // macOS Chrome 134
+  {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
+    'Sec-Ch-Ua': '"Chromium";v="134", "Google Chrome";v="134", "Not.A/Brand";v="99"',
+    'Sec-Ch-Ua-Platform': '"macOS"',
+    'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7',
+  },
+  // Windows Chrome 136
+  {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+    'Sec-Ch-Ua': '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"',
+    'Sec-Ch-Ua-Platform': '"Windows"',
+    'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+  },
+  // Windows Chrome 135
+  {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+    'Sec-Ch-Ua': '"Chromium";v="135", "Google Chrome";v="135", "Not.A/Brand";v="24"',
+    'Sec-Ch-Ua-Platform': '"Windows"',
+    'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7',
+  },
+  // macOS Safari 18.3
+  {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15',
+    'Sec-Ch-Ua': '"Not/A)Brand";v="8", "Safari";v="18"',
+    'Sec-Ch-Ua-Platform': '"macOS"',
+    'Accept-Language': 'zh-CN,zh-Hans;q=0.9',
+  },
+  // Linux Chrome 135
+  {
+    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+    'Sec-Ch-Ua': '"Chromium";v="135", "Google Chrome";v="135", "Not.A/Brand";v="24"',
+    'Sec-Ch-Ua-Platform': '"Linux"',
+    'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7',
+  },
+]
+
+function pickBrowserProfile(): BrowserProfile {
+  return BROWSER_PROFILES[Math.floor(Math.random() * BROWSER_PROFILES.length)]
+}
+
+/** Base headers that do not vary across browser profiles */
+const BASE_HEADERS = {
   Accept: '*/*',
   'Accept-Encoding': 'gzip, deflate, br, zstd',
-  'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
   Origin: 'https://chat.deepseek.com',
   Referer: 'https://chat.deepseek.com/',
-  'Sec-Ch-Ua': '"Not/A)Brand";v="99", "Chromium";v="148"',
   'Sec-Ch-Ua-Mobile': '?0',
-  'Sec-Ch-Ua-Platform': '"macOS"',
   'Sec-Fetch-Dest': 'empty',
   'Sec-Fetch-Mode': 'cors',
   'Sec-Fetch-Site': 'same-origin',
-  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
   'X-App-Version': '2.0.0',
   'X-Client-Locale': 'zh_CN',
   'X-Client-Platform': 'web',
   'x-Client-Timezone-Offset': '28800',
   'X-Client-Version': '2.0.0',
 }
+
+function buildHeaders(profile: BrowserProfile): Record<string, string> {
+  return { ...BASE_HEADERS, ...profile }
+}
+
 
 interface TokenInfo {
   accessToken: string
@@ -108,11 +173,13 @@ export class DeepSeekAdapter {
   private provider: Provider
   private account: Account
   private token: string
+  private headers: Record<string, string>
 
   constructor(provider: Provider, account: Account) {
     this.provider = provider
     this.account = account
     this.token = account.credentials.token || account.credentials.apiKey || account.credentials.refreshToken || ''
+    this.headers = buildHeaders(pickBrowserProfile())
   }
 
   private async acquireToken(): Promise<string> {
@@ -130,7 +197,7 @@ export class DeepSeekAdapter {
     const result = await axios.get(`${DEEPSEEK_API_BASE}/v0/users/current`, {
       headers: {
         Authorization: `Bearer ${this.token}`,
-        ...FAKE_HEADERS,
+        ...this.headers,
       },
       timeout: 15000,
       validateStatus: () => true,
@@ -176,7 +243,7 @@ export class DeepSeekAdapter {
       {
         headers: {
           Authorization: `Bearer ${token}`,
-          ...FAKE_HEADERS,
+          ...this.headers,
           Cookie: generateCookie(),
         },
         timeout: 15000,
@@ -212,7 +279,7 @@ export class DeepSeekAdapter {
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            ...FAKE_HEADERS,
+            ...this.headers,
           },
           timeout: 15000,
           validateStatus: () => true,
@@ -243,7 +310,7 @@ export class DeepSeekAdapter {
       {
         headers: {
           Authorization: `Bearer ${token}`,
-          ...FAKE_HEADERS,
+          ...this.headers,
         },
         timeout: 15000,
         validateStatus: () => true,
@@ -420,7 +487,7 @@ export class DeepSeekAdapter {
       {
         headers: {
           Authorization: `Bearer ${token}`,
-          ...FAKE_HEADERS,
+          ...this.headers,
           Referer: `https://chat.deepseek.com/a/chat/s/${sessionId}`,
           Cookie: generateCookie(),
           'X-Ds-Pow-Response': challengeAnswer,
@@ -443,7 +510,7 @@ export class DeepSeekAdapter {
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            ...FAKE_HEADERS,
+            ...this.headers,
           },
           timeout: 30000,
           validateStatus: () => true,

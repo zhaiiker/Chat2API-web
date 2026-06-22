@@ -77,7 +77,7 @@ export interface BuiltinProviderConfig extends Omit<Provider, 'createdAt' | 'upd
 /**
  * Load Balance Strategy Enum
  */
-export type LoadBalanceStrategy = 'round-robin' | 'fill-first' | 'failover'
+export type LoadBalanceStrategy = 'round-robin' | 'fill-first' | 'failover' | 'sequential'
 
 /**
  * Theme Enum
