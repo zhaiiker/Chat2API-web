@@ -236,36 +236,90 @@ export function claudeRequestToOpenAI(claudeRequest: ClaudeMessagesRequest): Cha
 
 /**
  * Convert OpenAI Chat Completions response to Claude Messages response
+ * Handles various response formats from different providers
  */
 export function openAIResponseToClaude(
   openAIResponse: any,
   requestId: string
 ): ClaudeMessagesResponse {
-  const choice = openAIResponse.choices?.[0]
-  if (!choice) {
-    throw new Error('Invalid OpenAI response: no choices')
+  // Handle null or undefined response
+  if (!openAIResponse) {
+    throw new Error('Invalid response: response is null or undefined')
   }
 
-  const message = choice.message
+  // Extract choices array - handle various formats
+  let choices = openAIResponse.choices
+  
+  // Some providers might wrap response differently
+  if (!choices && openAIResponse.data?.choices) {
+    choices = openAIResponse.data.choices
+  }
+  
+  if (!choices || !Array.isArray(choices) || choices.length === 0) {
+    throw new Error('Invalid OpenAI response: no choices array found')
+  }
+
+  const choice = choices[0]
+  if (!choice) {
+    throw new Error('Invalid OpenAI response: empty choice')
+  }
+
+  // Extract message - handle various formats
+  let message = choice.message
+  if (!message && choice.delta) {
+    // Some streaming responses might only have delta
+    message = choice.delta
+  }
+  if (!message) {
+    // Fallback: create empty message
+    message = { role: 'assistant', content: '' }
+  }
+
   const content: ClaudeContentBlock[] = []
 
-  // Add text content
+  // Add text content - handle various content formats
   if (message.content) {
-    content.push({
-      type: 'text',
-      text: message.content,
-    })
+    // Content might be string or array
+    if (typeof message.content === 'string') {
+      content.push({
+        type: 'text',
+        text: message.content,
+      })
+    } else if (Array.isArray(message.content)) {
+      // Handle content array (multimodal format)
+      for (const item of message.content) {
+        if (item.type === 'text' && item.text) {
+          content.push({
+            type: 'text',
+            text: item.text,
+          })
+        }
+      }
+    }
   }
 
   // Add tool calls
   if (message.tool_calls && Array.isArray(message.tool_calls)) {
     for (const toolCall of message.tool_calls) {
-      content.push({
-        type: 'tool_use',
-        id: toolCall.id,
-        name: toolCall.function.name,
-        input: JSON.parse(toolCall.function.arguments),
-      })
+      try {
+        // Parse arguments - might be string or object
+        let input: Record<string, any>
+        if (typeof toolCall.function.arguments === 'string') {
+          input = JSON.parse(toolCall.function.arguments)
+        } else {
+          input = toolCall.function.arguments || {}
+        }
+
+        content.push({
+          type: 'tool_use',
+          id: toolCall.id || `call_${Date.now()}`,
+          name: toolCall.function.name,
+          input,
+        })
+      } catch (e) {
+        console.warn('[Claude Converter] Failed to parse tool call:', e)
+        // Skip malformed tool calls
+      }
     }
   }
 
@@ -277,14 +331,35 @@ export function openAIResponseToClaude(
     })
   }
 
-  // Map finish reason
+  // Map finish reason - handle various formats
   let stopReason: ClaudeMessagesResponse['stop_reason'] = 'end_turn'
-  if (choice.finish_reason === 'length') {
+  const finishReason = choice.finish_reason || choice.stop_reason
+  
+  if (finishReason === 'length' || finishReason === 'max_tokens') {
     stopReason = 'max_tokens'
-  } else if (choice.finish_reason === 'stop') {
+  } else if (finishReason === 'stop' || finishReason === 'end_turn') {
     stopReason = 'end_turn'
-  } else if (choice.finish_reason === 'tool_calls') {
+  } else if (finishReason === 'tool_calls' || finishReason === 'tool_use') {
     stopReason = 'tool_use'
+  } else if (finishReason === 'stop_sequence') {
+    stopReason = 'stop_sequence'
+  }
+
+  // Extract usage - handle various formats
+  let inputTokens = 0
+  let outputTokens = 0
+  
+  if (openAIResponse.usage) {
+    inputTokens = openAIResponse.usage.prompt_tokens || 
+                  openAIResponse.usage.input_tokens || 0
+    outputTokens = openAIResponse.usage.completion_tokens || 
+                   openAIResponse.usage.output_tokens || 0
+  }
+
+  // Extract model name - handle various formats
+  let model = openAIResponse.model || 'unknown'
+  if (!model || model === 'unknown') {
+    model = requestId.split('-')[0] // Fallback to request id prefix
   }
 
   return {
@@ -292,12 +367,12 @@ export function openAIResponseToClaude(
     type: 'message',
     role: 'assistant',
     content,
-    model: openAIResponse.model,
+    model,
     stop_reason: stopReason,
     stop_sequence: null,
     usage: {
-      input_tokens: openAIResponse.usage?.prompt_tokens || 0,
-      output_tokens: openAIResponse.usage?.completion_tokens || 0,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
     },
   }
 }
