@@ -269,6 +269,14 @@ export function openAIResponseToClaude(
     }
   }
 
+  // If no content at all, add empty text block
+  if (content.length === 0) {
+    content.push({
+      type: 'text',
+      text: '',
+    })
+  }
+
   // Map finish reason
   let stopReason: ClaudeMessagesResponse['stop_reason'] = 'end_turn'
   if (choice.finish_reason === 'length') {

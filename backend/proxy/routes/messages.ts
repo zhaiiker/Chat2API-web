@@ -222,13 +222,13 @@ router.post('/messages', async (ctx: Context) => {
       ctx.set('X-Accel-Buffering', 'no')
 
       // Transform OpenAI SSE stream to Claude SSE format
+      let isFirstChunk = true
       const claudeStream = new Transform({
         transform(chunk: Buffer, encoding, callback) {
           try {
             const text = chunk.toString()
             const lines = text.split('\n').filter(line => line.trim())
 
-            let isFirst = false
             for (const line of lines) {
               if (line.startsWith('data: ')) {
                 const data = line.slice(6)
@@ -240,9 +240,10 @@ router.post('/messages', async (ctx: Context) => {
                 try {
                   const parsed = JSON.parse(data)
                   
-                  // Check if this is the first chunk
-                  if (parsed.choices?.[0]?.delta?.role === 'assistant') {
-                    isFirst = true
+                  // Check if this is the first chunk with role
+                  const isFirst = isFirstChunk && parsed.choices?.[0]?.delta?.role === 'assistant'
+                  if (isFirst) {
+                    isFirstChunk = false
                   }
 
                   const claudeEvent = openAIStreamChunkToClaude(parsed, isFirst)
@@ -251,6 +252,7 @@ router.post('/messages', async (ctx: Context) => {
                   }
                 } catch (e) {
                   // Skip invalid JSON
+                  console.warn('[Messages] Failed to parse SSE chunk:', e)
                 }
               }
             }
