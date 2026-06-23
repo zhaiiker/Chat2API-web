@@ -266,9 +266,10 @@ export class ProxyServer {
       ctx.body = {
         name: 'Chat2API Proxy',
         version: '1.1.2',
-        description: 'OpenAI API compatible proxy service',
+        description: 'OpenAI and Claude API compatible proxy service',
         endpoints: [
           'POST /v1/chat/completions',
+          'POST /v1/messages',
           'GET /v1/models',
           'GET /v1/models/:model',
           'POST /v1/completions',
