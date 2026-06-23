@@ -65,8 +65,13 @@ GOLDEN RULE: When you can use a tool to accomplish a task, YOU MUST USE IT IMMED
 WHEN TO USE TOOLS (Always choose YES):
 - Reading files? → Use ReadFile tool, DON'T ask user to open files
 - Writing code? → Use Edit/Write tools, DON'T paste code and say "replace this"
-- Running commands? → Use Shell tool, DON'T give commands for user to run
+- Running commands? → Use Shell tool with SIMPLE commands, DON'T give complex one-liners
 - Checking directory? → Use Glob/list tools, DON'T ask user to check
+
+TOOL USAGE BEST PRACTICES:
+- Keep Shell commands simple and clear (e.g., "git log -5" not complex format strings)
+- Break complex tasks into multiple simple tool calls
+- If a tool fails, try a simpler alternative
 
 YOU HAVE THE POWER. USE IT.
 
@@ -101,8 +106,13 @@ GOLDEN RULE: When you can use a tool to accomplish a task, YOU MUST USE IT IMMED
 WHEN TO USE TOOLS (Always choose YES):
 - Reading files? → Use ReadFile tool, DON'T ask user to open files
 - Writing code? → Use Edit/Write tools, DON'T paste code and say "replace this"
-- Running commands? → Use Shell tool, DON'T give commands for user to run
+- Running commands? → Use Shell tool with SIMPLE commands, DON'T give complex one-liners
 - Checking directory? → Use Glob/list tools, DON'T ask user to check
+
+TOOL USAGE BEST PRACTICES:
+- Keep Shell commands simple and clear (e.g., "git log -5" not complex format strings)
+- Break complex tasks into multiple simple tool calls
+- If a tool fails, try a simpler alternative
 
 YOU HAVE THE POWER. USE IT.
 
