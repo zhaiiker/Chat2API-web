@@ -265,19 +265,27 @@ function getHumanThinkingDelay(): number {
 
 /**
  * Simulate typing speed - calculate delay based on message length
- * Average human typing speed: 40-60 WPM (words per minute)
- * For Chinese: roughly 3-5 characters per second
+ * For short messages: simulate realistic typing delay
+ * For long messages: cap the delay to avoid excessive waiting
  */
 function getTypingDelay(messageLength: number): number {
   if (messageLength === 0) return 0
   
-  const charsPerSecond = 3.5 + Math.random() * 1.5 // 3.5-5 chars/sec
-  const baseTypingTime = (messageLength / charsPerSecond) * 1000
+  // For short messages (< 50 chars), use realistic typing speed
+  if (messageLength < 50) {
+    const charsPerSecond = 4 + Math.random() * 2 // 4-6 chars/sec
+    const typingTime = (messageLength / charsPerSecond) * 1000
+    return Math.floor(typingTime * 0.5) // Use 50% of calculated time
+  }
   
-  const minTypingTime = Math.max(500, baseTypingTime * 0.3)
-  const maxTypingTime = Math.max(1500, baseTypingTime * 0.6)
+  // For medium messages (50-200 chars), use scaled delay
+  if (messageLength < 200) {
+    return Math.floor(Math.random() * 1000 + 1000) // 1-2 seconds
+  }
   
-  return Math.floor(Math.random() * (maxTypingTime - minTypingTime) + minTypingTime)
+  // For long messages (200+ chars), use fixed cap to avoid long waits
+  // Assumption: user copy-pasted or typed very fast
+  return Math.floor(Math.random() * 1500 + 1500) // 1.5-3 seconds max
 }
 
 /**
