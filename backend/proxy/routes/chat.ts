@@ -19,6 +19,7 @@ import {
   transformChunkToAnthropic
 } from '../utils/toolFormatConverter'
 import { extractUserInputFromMessages, normalizeChatRoles } from '../utils/messageContent'
+import { cleanToolMarkersFromResponse } from '../utils/cleanToolMarkers'
 
 const router = new Router({ prefix: '/v1/chat' })
 
@@ -393,6 +394,9 @@ router.post('/completions', async (ctx: Context) => {
         } else {
           ctx.set('Content-Type', 'application/json')
           if (result.body) {
+            // Clean tool markers from response
+            cleanToolMarkersFromResponse(result.body)
+            
             if (isAnthropicToolFormat(request.tool_format)) {
               ctx.body = transformResponseToAnthropic(result.body)
             } else {

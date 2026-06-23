@@ -4,6 +4,7 @@
  */
 
 import { ChatCompletionRequest, ChatMessage, ChatCompletionTool } from '../types'
+import { cleanToolMarkers } from './cleanToolMarkers'
 
 /**
  * Claude Messages API Request Format
@@ -281,18 +282,25 @@ export function openAIResponseToClaude(
   if (message.content) {
     // Content might be string or array
     if (typeof message.content === 'string') {
-      content.push({
-        type: 'text',
-        text: message.content,
-      })
+      // Clean tool markers from the content
+      const cleanedText = cleanToolMarkers(message.content)
+      if (cleanedText) {
+        content.push({
+          type: 'text',
+          text: cleanedText,
+        })
+      }
     } else if (Array.isArray(message.content)) {
       // Handle content array (multimodal format)
       for (const item of message.content) {
         if (item.type === 'text' && item.text) {
-          content.push({
-            type: 'text',
-            text: item.text,
-          })
+          const cleanedText = cleanToolMarkers(item.text)
+          if (cleanedText) {
+            content.push({
+              type: 'text',
+              text: cleanedText,
+            })
+          }
         }
       }
     }
@@ -419,13 +427,17 @@ export function openAIStreamChunkToClaude(chunk: any, isFirst: boolean): string 
 
   // Handle content delta
   if (delta.content) {
-    events.push('event: content_block_delta')
-    events.push(`data: ${JSON.stringify({
-      type: 'content_block_delta',
-      index: 0,
-      delta: { type: 'text_delta', text: delta.content },
-    })}`)
-    events.push('')
+    // Clean tool markers from streaming content
+    const cleanedContent = cleanToolMarkers(delta.content)
+    if (cleanedContent) {
+      events.push('event: content_block_delta')
+      events.push(`data: ${JSON.stringify({
+        type: 'content_block_delta',
+        index: 0,
+        delta: { type: 'text_delta', text: cleanedContent },
+      })}`)
+      events.push('')
+    }
   }
 
   // Handle tool calls
