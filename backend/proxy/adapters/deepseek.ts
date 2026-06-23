@@ -37,12 +37,26 @@ const BROWSER_PROFILES: BrowserProfile[] = [
     'Sec-Ch-Ua-Platform': '"macOS"',
     'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
   },
+  // macOS Chrome 135
+  {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+    'Sec-Ch-Ua': '"Chromium";v="135", "Google Chrome";v="135", "Not.A/Brand";v="24"',
+    'Sec-Ch-Ua-Platform': '"macOS"',
+    'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7',
+  },
   // macOS Chrome 134
   {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
     'Sec-Ch-Ua': '"Chromium";v="134", "Google Chrome";v="134", "Not.A/Brand";v="99"',
     'Sec-Ch-Ua-Platform': '"macOS"',
-    'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7',
+    'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,ja;q=0.7',
+  },
+  // macOS Chrome 133
+  {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+    'Sec-Ch-Ua': '"Chromium";v="133", "Google Chrome";v="133", "Not-A.Brand";v="24"',
+    'Sec-Ch-Ua-Platform': '"macOS"',
+    'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8',
   },
   // Windows Chrome 136
   {
@@ -58,6 +72,34 @@ const BROWSER_PROFILES: BrowserProfile[] = [
     'Sec-Ch-Ua-Platform': '"Windows"',
     'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7',
   },
+  // Windows Chrome 134
+  {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
+    'Sec-Ch-Ua': '"Chromium";v="134", "Google Chrome";v="134", "Not.A/Brand";v="99"',
+    'Sec-Ch-Ua-Platform': '"Windows"',
+    'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8',
+  },
+  // Windows Chrome 133
+  {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+    'Sec-Ch-Ua': '"Chromium";v="133", "Google Chrome";v="133", "Not-A.Brand";v="24"',
+    'Sec-Ch-Ua-Platform': '"Windows"',
+    'Accept-Language': 'zh-CN,zh-TW;q=0.9,zh;q=0.8,en;q=0.7',
+  },
+  // Windows 11 Edge 136
+  {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0',
+    'Sec-Ch-Ua': '"Chromium";v="136", "Microsoft Edge";v="136", "Not.A/Brand";v="8"',
+    'Sec-Ch-Ua-Platform': '"Windows"',
+    'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+  },
+  // Windows 11 Edge 135
+  {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36 Edg/135.0.0.0',
+    'Sec-Ch-Ua': '"Chromium";v="135", "Microsoft Edge";v="135", "Not.A/Brand";v="99"',
+    'Sec-Ch-Ua-Platform': '"Windows"',
+    'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8',
+  },
   // macOS Safari 18.3
   {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15',
@@ -65,12 +107,54 @@ const BROWSER_PROFILES: BrowserProfile[] = [
     'Sec-Ch-Ua-Platform': '"macOS"',
     'Accept-Language': 'zh-CN,zh-Hans;q=0.9',
   },
+  // macOS Safari 18.2
+  {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.2 Safari/605.1.15',
+    'Sec-Ch-Ua': '"Not/A)Brand";v="8", "Safari";v="18"',
+    'Sec-Ch-Ua-Platform': '"macOS"',
+    'Accept-Language': 'en-US,en;q=0.9',
+  },
+  // macOS Safari 17.6
+  {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15',
+    'Sec-Ch-Ua': '"Not/A)Brand";v="99", "Safari";v="17"',
+    'Sec-Ch-Ua-Platform': '"macOS"',
+    'Accept-Language': 'zh-CN,zh-Hans;q=0.9,en;q=0.8',
+  },
   // Linux Chrome 135
   {
     'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
     'Sec-Ch-Ua': '"Chromium";v="135", "Google Chrome";v="135", "Not.A/Brand";v="24"',
     'Sec-Ch-Ua-Platform': '"Linux"',
     'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7',
+  },
+  // Linux Chrome 134
+  {
+    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
+    'Sec-Ch-Ua': '"Chromium";v="134", "Google Chrome";v="134", "Not.A/Brand";v="99"',
+    'Sec-Ch-Ua-Platform': '"Linux"',
+    'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8',
+  },
+  // Linux Firefox 133
+  {
+    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0',
+    'Sec-Ch-Ua': '',
+    'Sec-Ch-Ua-Platform': '"Linux"',
+    'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8',
+  },
+  // Windows Firefox 134
+  {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:134.0) Gecko/20100101 Firefox/134.0',
+    'Sec-Ch-Ua': '',
+    'Sec-Ch-Ua-Platform': '"Windows"',
+    'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8',
+  },
+  // macOS Firefox 133
+  {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0',
+    'Sec-Ch-Ua': '',
+    'Sec-Ch-Ua-Platform': '"macOS"',
+    'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
   },
 ]
 
@@ -169,17 +253,83 @@ function unixTimestamp(): number {
   return Math.floor(Date.now() / 1000)
 }
 
+/**
+ * Simulate human thinking time before sending request
+ * Returns a random delay between min and max milliseconds
+ */
+function getHumanThinkingDelay(): number {
+  const minDelay = 800
+  const maxDelay = 2500
+  return Math.floor(Math.random() * (maxDelay - minDelay) + minDelay)
+}
+
+/**
+ * Simulate typing speed - calculate delay based on message length
+ * Average human typing speed: 40-60 WPM (words per minute)
+ * For Chinese: roughly 3-5 characters per second
+ */
+function getTypingDelay(messageLength: number): number {
+  if (messageLength === 0) return 0
+  
+  const charsPerSecond = 3.5 + Math.random() * 1.5 // 3.5-5 chars/sec
+  const baseTypingTime = (messageLength / charsPerSecond) * 1000
+  
+  const minTypingTime = Math.max(500, baseTypingTime * 0.3)
+  const maxTypingTime = Math.max(1500, baseTypingTime * 0.6)
+  
+  return Math.floor(Math.random() * (maxTypingTime - minTypingTime) + minTypingTime)
+}
+
+/**
+ * Add random jitter to simulate network variance
+ */
+function getNetworkJitter(): number {
+  return Math.floor(Math.random() * 300 + 100)
+}
+
 export class DeepSeekAdapter {
   private provider: Provider
   private account: Account
   private token: string
   private headers: Record<string, string>
+  private lastRequestTime: number = 0
+  private requestCount: number = 0
 
   constructor(provider: Provider, account: Account) {
     this.provider = provider
     this.account = account
     this.token = account.credentials.token || account.credentials.apiKey || account.credentials.refreshToken || ''
     this.headers = buildHeaders(pickBrowserProfile())
+  }
+
+  /**
+   * Simulate human behavior delay before making API request
+   */
+  private async simulateHumanBehavior(messageContent: string = ''): Promise<void> {
+    const now = Date.now()
+    const timeSinceLastRequest = now - this.lastRequestTime
+    
+    let totalDelay = 0
+    
+    if (this.requestCount === 0) {
+      totalDelay = getHumanThinkingDelay()
+      console.log(`[DeepSeek] First request - simulating thinking time: ${totalDelay}ms`)
+    } else if (timeSinceLastRequest < 3000) {
+      const thinkingDelay = getHumanThinkingDelay()
+      const typingDelay = getTypingDelay(messageContent.length)
+      totalDelay = thinkingDelay + typingDelay
+      console.log(`[DeepSeek] Simulating human behavior: thinking=${thinkingDelay}ms, typing=${typingDelay}ms (${messageContent.length} chars)`)
+    } else {
+      totalDelay = getNetworkJitter()
+      console.log(`[DeepSeek] Adding network jitter: ${totalDelay}ms`)
+    }
+    
+    if (totalDelay > 0) {
+      await new Promise(resolve => setTimeout(resolve, totalDelay))
+    }
+    
+    this.lastRequestTime = Date.now()
+    this.requestCount++
   }
 
   private async acquireToken(): Promise<string> {
@@ -449,6 +599,9 @@ export class DeepSeekAdapter {
     const messages = [...request.messages]
 
     let prompt = this.messagesToPrompt(messages, false)
+    
+    // Simulate human behavior before sending request
+    await this.simulateHumanBehavior(prompt)
 
     console.log('[DeepSeek] Prompt length:', prompt.length, 'message count:', messages.length)
     if (!prompt.trim()) {
