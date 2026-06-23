@@ -96,6 +96,12 @@ router.post('/completions', async (ctx: Context) => {
 
   request.messages = normalizeChatRoles(request.messages) as typeof request.messages
 
+  // Debug: Log tool information
+  if (request.tools && Array.isArray(request.tools) && request.tools.length > 0) {
+    const toolNames = request.tools.map(t => t.function?.name || 'unknown').join(', ')
+    console.log(`[Chat] Request includes ${request.tools.length} tools: [${toolNames}]`)
+  }
+
   // Read feature parameters from Headers (lower priority than request body)
   const webSearchFromHeader = ctx.headers['x-web-search'] === 'true'
   const reasoningEffortFromHeader = ctx.headers['x-reasoning-effort'] as 'low' | 'medium' | 'high' | undefined
