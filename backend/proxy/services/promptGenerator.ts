@@ -55,7 +55,21 @@ function generateToolNames(tools: ChatCompletionTool[]): string {
  * Generate bracket format example
  */
 function generateBracketFormatExample(): string {
-  return `## Tool Usage Philosophy
+  return `## CRITICAL: Your Environment
+You are working in a COMMAND-LINE TERMINAL environment, NOT a web browser or web interface.
+
+IMPORTANT RESTRICTIONS:
+- There is NO "open" tool - this is not a web environment
+- Use "Shell" tool for running commands, NOT "open"
+- Use "ReadFile" tool for reading files, NOT "open"
+- Use "Edit" or "Write" tools for editing files, NOT any web-based tools
+
+If you think about using "open" tool, STOP - it doesn't exist here. Use the appropriate alternative:
+- Want to run a command? → Use "Shell" tool
+- Want to read a file? → Use "ReadFile" tool
+- Want to edit a file? → Use "Edit" or "Write" tool
+
+## Tool Usage Philosophy
 YOU ARE A POWERFUL AUTONOMOUS AGENT WITH TOOLS. Your primary job is to USE TOOLS, not just suggest them.
 
 GOLDEN RULE: When you can use a tool to accomplish a task, YOU MUST USE IT IMMEDIATELY.
@@ -96,7 +110,21 @@ CRITICAL RULES:
  * Generate XML format example
  */
 function generateXmlFormatExample(): string {
-  return `## Tool Usage Philosophy
+  return `## CRITICAL: Your Environment
+You are working in a COMMAND-LINE TERMINAL environment, NOT a web browser or web interface.
+
+IMPORTANT RESTRICTIONS:
+- There is NO "open" tool - this is not a web environment
+- Use "Shell" tool for running commands, NOT "open"
+- Use "ReadFile" tool for reading files, NOT "open"
+- Use "Edit" or "Write" tools for editing files, NOT any web-based tools
+
+If you think about using "open" tool, STOP - it doesn't exist here. Use the appropriate alternative:
+- Want to run a command? → Use "Shell" tool
+- Want to read a file? → Use "ReadFile" tool
+- Want to edit a file? → Use "Edit" or "Write" tool
+
+## Tool Usage Philosophy
 YOU ARE A POWERFUL AUTONOMOUS AGENT WITH TOOLS. Your primary job is to USE TOOLS, not just suggest them.
 
 GOLDEN RULE: When you can use a tool to accomplish a task, YOU MUST USE IT IMMEDIATELY.
@@ -155,8 +183,23 @@ function substituteTemplateVariables(template: string, variables: TemplateVariab
  */
 function generateBracketPrompt(tools: ChatCompletionTool[]): string {
   const toolDefinitions = generateToolDefinitions(tools)
+  const toolNames = generateToolNames(tools)
 
-  return `## Available Tools
+  return `## ⚠️ AVAILABLE TOOLS - READ THIS FIRST ⚠️
+
+You have access to EXACTLY ${tools.length} tools. These are the ONLY tools you can use:
+
+${toolNames}
+
+CRITICAL RULES:
+1. If a tool is NOT in the above list, it DOES NOT EXIST - don't try to use it
+2. Tool "open" does NOT exist - this is a command-line environment, not a web browser
+3. If you think of using a tool not in the list above, STOP and use an alternative from the list
+4. When in doubt, use: Shell (for commands), ReadFile (for reading), Edit/Write (for editing)
+
+---
+
+## Available Tools
 You can invoke the following developer tools. Call a tool only when it is required and follow the JSON schema exactly when providing arguments.
 
 CRITICAL: Tool names are CASE-SENSITIVE. You MUST use the exact tool name as defined below, including any prefixes like 'default_api:'.
@@ -180,8 +223,23 @@ When you receive a tool result, it will be in the format:
  */
 function generateXmlPrompt(tools: ChatCompletionTool[]): string {
   const toolDefinitions = generateToolDefinitions(tools)
+  const toolNames = generateToolNames(tools)
 
-  return `## Available Tools
+  return `## ⚠️ AVAILABLE TOOLS - READ THIS FIRST ⚠️
+
+You have access to EXACTLY ${tools.length} tools. These are the ONLY tools you can use:
+
+${toolNames}
+
+CRITICAL RULES:
+1. If a tool is NOT in the above list, it DOES NOT EXIST - don't try to use it
+2. Tool "open" does NOT exist - this is a command-line environment, not a web browser
+3. If you think of using a tool not in the list above, STOP and use an alternative from the list
+4. When in doubt, use: Shell (for commands), ReadFile (for reading), Edit/Write (for editing)
+
+---
+
+## Available Tools
 You can invoke the following developer tools. Call a tool only when it is required and follow the JSON schema exactly when providing arguments.
 
 CRITICAL: Tool names are CASE-SENSITIVE. You MUST use the exact tool name as defined below, including any prefixes like 'default_api:'.
