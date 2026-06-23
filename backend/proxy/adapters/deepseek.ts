@@ -312,32 +312,14 @@ export class DeepSeekAdapter {
 
   /**
    * Simulate human behavior delay before making API request
+   * DISABLED: Returns immediately for faster responses
    */
   private async simulateHumanBehavior(messageContent: string = ''): Promise<void> {
-    const now = Date.now()
-    const timeSinceLastRequest = now - this.lastRequestTime
-    
-    let totalDelay = 0
-    
-    if (this.requestCount === 0) {
-      totalDelay = getHumanThinkingDelay()
-      console.log(`[DeepSeek] First request - simulating thinking time: ${totalDelay}ms`)
-    } else if (timeSinceLastRequest < 3000) {
-      const thinkingDelay = getHumanThinkingDelay()
-      const typingDelay = getTypingDelay(messageContent.length)
-      totalDelay = thinkingDelay + typingDelay
-      console.log(`[DeepSeek] Simulating human behavior: thinking=${thinkingDelay}ms, typing=${typingDelay}ms (${messageContent.length} chars)`)
-    } else {
-      totalDelay = getNetworkJitter()
-      console.log(`[DeepSeek] Adding network jitter: ${totalDelay}ms`)
-    }
-    
-    if (totalDelay > 0) {
-      await new Promise(resolve => setTimeout(resolve, totalDelay))
-    }
-    
+    // Delay disabled - return immediately for fast responses
+    console.log('[DeepSeek] Human behavior simulation disabled for fast responses')
     this.lastRequestTime = Date.now()
     this.requestCount++
+    return
   }
 
   private async acquireToken(): Promise<string> {
