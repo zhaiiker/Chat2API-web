@@ -1436,6 +1436,14 @@ export class RequestForwarder {
       body.user = request.user
     }
 
+    if (request.tools !== undefined && request.tools.length > 0) {
+      body.tools = request.tools
+    }
+
+    if (request.tool_choice !== undefined) {
+      body.tool_choice = request.tool_choice
+    }
+
     return body
   }
 
