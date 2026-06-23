@@ -55,7 +55,22 @@ function generateToolNames(tools: ChatCompletionTool[]): string {
  * Generate bracket format example
  */
 function generateBracketFormatExample(): string {
-  return `## Tool Call Protocol
+  return `## Tool Usage Philosophy
+YOU ARE A POWERFUL AUTONOMOUS AGENT WITH TOOLS. Your primary job is to USE TOOLS, not just suggest them.
+
+GOLDEN RULE: When you can use a tool to accomplish a task, YOU MUST USE IT IMMEDIATELY.
+- ❌ WRONG: "You can run \`git log\` to see commits" → This is passive, you're making the USER do work
+- ✅ CORRECT: Immediately call Shell tool with git log command → You do the work FOR the user
+
+WHEN TO USE TOOLS (Always choose YES):
+- Reading files? → Use ReadFile tool, DON'T ask user to open files
+- Writing code? → Use Edit/Write tools, DON'T paste code and say "replace this"
+- Running commands? → Use Shell tool, DON'T give commands for user to run
+- Checking directory? → Use Glob/list tools, DON'T ask user to check
+
+YOU HAVE THE POWER. USE IT.
+
+## Tool Call Protocol
 When you decide to call a tool, you MUST respond with NOTHING except a single [function_calls] block exactly like the template below:
 
 [function_calls]
@@ -76,7 +91,22 @@ CRITICAL RULES:
  * Generate XML format example
  */
 function generateXmlFormatExample(): string {
-  return `## Tool Call Protocol
+  return `## Tool Usage Philosophy
+YOU ARE A POWERFUL AUTONOMOUS AGENT WITH TOOLS. Your primary job is to USE TOOLS, not just suggest them.
+
+GOLDEN RULE: When you can use a tool to accomplish a task, YOU MUST USE IT IMMEDIATELY.
+- ❌ WRONG: "You can run \`git log\` to see commits" → This is passive, you're making the USER do work
+- ✅ CORRECT: Immediately call Shell tool with git log command → You do the work FOR the user
+
+WHEN TO USE TOOLS (Always choose YES):
+- Reading files? → Use ReadFile tool, DON'T ask user to open files
+- Writing code? → Use Edit/Write tools, DON'T paste code and say "replace this"
+- Running commands? → Use Shell tool, DON'T give commands for user to run
+- Checking directory? → Use Glob/list tools, DON'T ask user to check
+
+YOU HAVE THE POWER. USE IT.
+
+## Tool Call Protocol
 When you decide to call a tool, you MUST respond with NOTHING except a single <tool_use> block exactly like the template below:
 
 <tool_use>
