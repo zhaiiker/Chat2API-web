@@ -49,7 +49,7 @@ router.get('/app/stats', async (ctx: Context) => {
 
 router.get('/app/trend', async (ctx: Context) => {
   try {
-    const days = ctx.query.days ? parseInt(ctx.query.days as string, 10) : 7
+    const days = Math.min(365, Math.max(1, ctx.query.days ? parseInt(ctx.query.days as string, 10) : 7))
     const trend = storeManager.getLogTrend(days)
     ctx.body = createSuccessResponse(trend)
   } catch (error) {
@@ -61,7 +61,7 @@ router.get('/app/trend', async (ctx: Context) => {
 router.get('/app/trend/:accountId', async (ctx: Context) => {
   try {
     const accountId = ctx.params.accountId
-    const days = ctx.query.days ? parseInt(ctx.query.days as string, 10) : 7
+    const days = Math.min(365, Math.max(1, ctx.query.days ? parseInt(ctx.query.days as string, 10) : 7))
     const trend = storeManager.getAccountLogTrend(accountId, days)
     ctx.body = createSuccessResponse(trend)
   } catch (error) {
@@ -84,7 +84,8 @@ router.post('/app/clear', async (ctx: Context) => {
 
 router.get('/request', async (ctx: Context) => {
   try {
-    const limit = ctx.query.limit ? parseInt(ctx.query.limit as string, 10) : undefined
+    const rawLimit = ctx.query.limit ? parseInt(ctx.query.limit as string, 10) : undefined
+    const limit = rawLimit !== undefined ? Math.min(1000, Math.max(1, rawLimit)) : undefined
     const status = ctx.query.status as 'success' | 'error' | undefined
     const providerId = ctx.query.providerId as string | undefined
     
@@ -109,7 +110,7 @@ router.get('/request/stats', async (ctx: Context) => {
 
 router.get('/request/trend', async (ctx: Context) => {
   try {
-    const days = ctx.query.days ? parseInt(ctx.query.days as string, 10) : 7
+    const days = Math.min(365, Math.max(1, ctx.query.days ? parseInt(ctx.query.days as string, 10) : 7))
     const trend = storeManager.getRequestLogTrend(days)
     ctx.body = createSuccessResponse(trend)
   } catch (error) {
